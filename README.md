@@ -26,6 +26,8 @@ técnico reconstruido sobre un entorno mínimo propio.
 | 001 | Confusión de algoritmo en JWT (RS256 → HS256) | [001-jwt-algorithm-confusion](001-jwt-algorithm-confusion/) | `python3 exploit_poc.py` |
 | 002 | SSRF en un renderizador de URLs | [002-ssrf-pdf-renderer](002-ssrf-pdf-renderer/) | `python3 exploit_poc.py` |
 | 003 | Deserialización insegura (ejecución de código) | [003-insecure-deserialization-rce](003-insecure-deserialization-rce/) | `python3 exploit_poc.py` |
+| 004 | Autorización a nivel de objeto (IDOR) | [004-idor-object-authorization](004-idor-object-authorization/) | `python3 exploit_poc.py` |
+| 005 | Escritura fuera del destino con el nombre del miembro (tar-slip) | [005-archive-path-traversal](005-archive-path-traversal/) | `python3 exploit_poc.py` |
 
 ## Contrato de cada cápsula
 
