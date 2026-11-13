@@ -25,6 +25,7 @@ técnico reconstruido sobre un entorno mínimo propio.
 |---|--------|--------|---------|
 | 001 | Confusión de algoritmo en JWT (RS256 → HS256) | [001-jwt-algorithm-confusion](001-jwt-algorithm-confusion/) | `python3 exploit_poc.py` |
 | 002 | SSRF en un renderizador de URLs | [002-ssrf-pdf-renderer](002-ssrf-pdf-renderer/) | `python3 exploit_poc.py` |
+| 003 | Deserialización insegura (ejecución de código) | [003-insecure-deserialization-rce](003-insecure-deserialization-rce/) | `python3 exploit_poc.py` |
 
 ## Contrato de cada cápsula
 
