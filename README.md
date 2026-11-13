@@ -2,7 +2,7 @@
 
 Laboratorios sintéticos de seguridad ofensiva. Cada cápsula es un fallo real,
 reconstruido desde cero en código propio, con su exploit determinista y su parche.
-Todo corre en menos de diez segundos, sin dependencias externas y sin red.
+Todo corre en menos de diez segundos, sin dependencias externas y sin red externa.
 
 ## Por qué existe
 
@@ -24,6 +24,7 @@ técnico reconstruido sobre un entorno mínimo propio.
 | # | Vector | Sujeto | Comando |
 |---|--------|--------|---------|
 | 001 | Confusión de algoritmo en JWT (RS256 → HS256) | [001-jwt-algorithm-confusion](001-jwt-algorithm-confusion/) | `python3 exploit_poc.py` |
+| 002 | SSRF en un renderizador de URLs | [002-ssrf-pdf-renderer](002-ssrf-pdf-renderer/) | `python3 exploit_poc.py` |
 
 ## Contrato de cada cápsula
 
@@ -37,7 +38,9 @@ NNN-<vector>/
 
 Cuatro reglas que se comprueban, no se prometen:
 
-1. **Determinista.** Dos corridas, el mismo resultado. Sin reloj, sin red, sin azar.
+1. **Determinista.** Dos corridas, el mismo resultado. Sin reloj, sin azar, sin red externa.
+   Las cápsulas que necesitan un servicio levantan uno efímero en `127.0.0.1` y lo apagan
+   al terminar: el aislamiento es parte del sujeto, no una promesa.
 2. **Autocontenida.** Sólo biblioteca estándar. Nada que instalar.
 3. **Falsable.** El PoC decide por código de salida, no por lo que imprime.
 4. **Dual.** La misma corrida contra el parche debe fallar de forma determinista.
