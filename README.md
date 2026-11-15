@@ -34,6 +34,8 @@ técnico reconstruido sobre un entorno mínimo propio.
 | 005 | Escritura fuera del destino con el nombre del miembro (tar-slip) | [005-archive-path-traversal](005-archive-path-traversal/) | `python3 exploit_poc.py` |
 | 006 | Inyección SQL en un contexto numérico (el comentario de bloque hace de espacio) | [006-sql-injection-numeric-context](006-sql-injection-numeric-context/) | `python3 exploit_poc.py` |
 | 007 | CORS que refleja el origen del atacante (mencionar el dominio no es serlo) | [007-cors-origin-reflection](007-cors-origin-reflection/) | `python3 exploit_poc.py` |
+| 008 | Cupón de un solo uso que nunca cuenta sus usos (la regla existe sólo como texto) | [008-insecure-design-coupon-ledger](008-insecure-design-coupon-ledger/) | `python3 exploit_poc.py` |
+| 009 | Digest truncado a cuatro hex (la sal cierra el informe, no el fallo) | [009-truncated-hash-salt](009-truncated-hash-salt/) | `python3 exploit_poc.py` |
 
 ## Contrato de cada cápsula
 
@@ -88,9 +90,11 @@ OK     004-idor-object-authorization/ (vulnerable=0 parche=1 ingenuo=0 roto=3)
 OK     005-archive-path-traversal/ (vulnerable=0 parche=1 ingenuo=0 roto=3)
 OK     006-sql-injection-numeric-context/ (vulnerable=0 parche=1 ingenuo=0 roto=3)
 OK     007-cors-origin-reflection/ (vulnerable=0 parche=1 ingenuo=0 roto=3)
+OK     008-insecure-design-coupon-ledger/ (vulnerable=0 parche=1 ingenuo=0 roto=3)
+OK     009-truncated-hash-salt/ (vulnerable=0 parche=1 ingenuo=0 roto=3)
 
-7/7 capsulas: ataque RC 0, parche RC 1, parche ingenuo RC 0, sujeto roto RC 3
-OK     tabla del README: 7 filas, 7 directorios
+9/9 capsulas: ataque RC 0, parche RC 1, parche ingenuo RC 0, sujeto roto RC 3
+OK     tabla del README: 9 filas, 9 directorios
 ```
 
 Sin cápsulas el script falla en vez de salir en verde: un cero de inventario no es una
