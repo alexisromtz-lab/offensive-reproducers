@@ -86,6 +86,27 @@ El control corre dentro de la misma corrida, con dos cuentas nuevas: si el sujet
 también el cupón legítimo, sale RC `3` — rompió, no cerró. Comprobado con un sujeto que
 niega todo: cierra las tres vías y aun así **no** se lleva el `1`.
 
+## Un rechazo tiene que estar declarado
+
+La primera versión de este PoC atrapaba `Exception`. Con eso, un sujeto que **revienta** en la
+rama del código con relleno —`ValueError: rama de normalizacion sin implementar`— salía como
+`[BLOQUEADA]`, o sea `RC 1`: un error interno contado como cupón cerrado.
+
+Ahora el PoC toma las excepciones del **propio módulo del sujeto** y sólo absorbe esas:
+
+```python
+RECHAZOS_DECLARADOS = ("CuponInvalido", "CuponAgotado", "CompraInvalida")
+except rechazos as exc:      # rechazos = lo que el sujeto declara, no lo que el PoC supone
+```
+
+Cualquier otra excepción sube y la corrida termina en `RC 3`. Medido con un sujeto que declara
+los tres rechazos pero lanza `ValueError` sólo con el código con relleno: **antes `RC 1`,
+después `RC 3`**. Ese sujeto es [control_falso_cierre.py](control_falso_cierre.py) y
+`./verificar-capsulas.sh` lo corre en cada push: si volviera a dar `RC 1`, el comando se
+pone rojo. Si el sujeto no declara ninguno, el PoC avisa por `stderr`
+(`AUSENCIA: …`) en vez de callarse: la cápsula mide fronteras declaradas, no fronteras
+adivinadas.
+
 ## Frontera: qué NO demuestra
 
 - **No mide concurrencia.** Los canjes se atienden uno tras otro. Dos peticiones simultáneas

@@ -1,9 +1,9 @@
 #!/bin/sh
-# Las cuatro promesas del README, comprobadas en un solo lugar: cada capsula da
+# Las cinco promesas del README, comprobadas en un solo lugar: cada capsula da
 # RC 0 contra el servicio vulnerable, RC 1 contra el parche, RC 0 contra ese
-# mismo parche en su variante ingenua -que debe seguir cayendo- y RC 3 contra
-# `sujeto_roto.py`. El CI corre este mismo script en cada push: si aqui no sale,
-# el badge y el README mienten.
+# mismo parche en su variante ingenua -que debe seguir cayendo-, RC 3 contra
+# `sujeto_roto.py` y RC 3 contra cada `control_*.py` que la capsula declare. El CI
+# corre este mismo script en cada push: si aqui no sale, el badge y el README mienten.
 set -u
 
 fallos=0
@@ -29,10 +29,25 @@ for capsula in [0-9][0-9][0-9]-*/; do
   (cd "$capsula" && python3 exploit_poc.py --app ../sujeto_roto.py >/dev/null 2>&1)
   roto=$?
 
-  if [ "$vulnerable" -eq 0 ] && [ "$parche" -eq 1 ] && [ "$ingenuo" -eq 0 ] && [ "$roto" -eq 3 ]; then
-    echo "OK     $capsula (vulnerable=0 parche=1 ingenuo=0 roto=3)"
+  # Cuarto modo, por capsula: los controles que la propia capsula declara. Cada
+  # `control_*.py` es una promesa escrita en su README --«un error interno no es un
+  # cupon cerrado», «una deduccion no es una apertura»-- y aqui tiene su lector. Si
+  # alguno devolviera 1, la promesa seria prosa.
+  controles=$roto
+  hay_control=no
+  for control in "$capsula"control_*.py; do
+    [ -f "$control" ] || continue
+    hay_control=si
+    (cd "$capsula" && python3 exploit_poc.py --app "../$control" >/dev/null 2>&1)
+    rc=$?
+    [ "$rc" -eq 3 ] || controles=$rc
+  done
+  [ "$hay_control" = si ] || controles=3
+
+  if [ "$vulnerable" -eq 0 ] && [ "$parche" -eq 1 ] && [ "$ingenuo" -eq 0 ] && [ "$roto" -eq 3 ] && [ "$controles" -eq 3 ]; then
+    echo "OK     $capsula (vulnerable=0 parche=1 ingenuo=0 roto=3 control=$([ "$hay_control" = si ] && echo 3 || echo n/a))"
   else
-    echo "FALLA  $capsula (vulnerable=$vulnerable parche=$parche ingenuo=$ingenuo roto=$roto)"
+    echo "FALLA  $capsula (vulnerable=$vulnerable parche=$parche ingenuo=$ingenuo roto=$roto control=$controles)"
     fallos=$((fallos + 1))
   fi
 done

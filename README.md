@@ -67,7 +67,7 @@ Seis reglas que se comprueban, no se prometen:
 
 ## Verificar todo
 
-Un solo comando comprueba las cuatro promesas en todas las cápsulas, y es el mismo que
+Un solo comando comprueba las cinco promesas en todas las cápsulas, y es el mismo que
 corre el CI en cada push — el badge de arriba es su resultado, no una promesa:
 
 ```bash
@@ -80,18 +80,23 @@ y contra `sujeto_roto.py` (RC 3). Los dos últimos son los que impiden el falso 
 parche que cierra sólo el caso reportado y deja abierta la clase de fallo se desenmascara
 en el tercero, y un sujeto que falla siempre no puede ser absuelto con `1`.
 
+La quinta: cada `control_*.py` que una cápsula declara se corre y debe dar **RC 3**. Ahí
+viven las promesas que el README de esa cápsula escribe con palabras —«un error interno no
+es un cupón cerrado» (008), «una deducción no es una apertura» (009)—, de modo que si
+dejaran de cumplirse el comando se pone rojo en vez de seguir contando la historia.
+
 Contra un clon en blanco, el 15-Nov-2026:
 
 ```
-OK     001-jwt-algorithm-confusion/ (vulnerable=0 parche=1 ingenuo=0 roto=3)
-OK     002-ssrf-pdf-renderer/ (vulnerable=0 parche=1 ingenuo=0 roto=3)
-OK     003-insecure-deserialization-rce/ (vulnerable=0 parche=1 ingenuo=0 roto=3)
-OK     004-idor-object-authorization/ (vulnerable=0 parche=1 ingenuo=0 roto=3)
-OK     005-archive-path-traversal/ (vulnerable=0 parche=1 ingenuo=0 roto=3)
-OK     006-sql-injection-numeric-context/ (vulnerable=0 parche=1 ingenuo=0 roto=3)
-OK     007-cors-origin-reflection/ (vulnerable=0 parche=1 ingenuo=0 roto=3)
-OK     008-insecure-design-coupon-ledger/ (vulnerable=0 parche=1 ingenuo=0 roto=3)
-OK     009-truncated-hash-salt/ (vulnerable=0 parche=1 ingenuo=0 roto=3)
+OK     001-jwt-algorithm-confusion/ (vulnerable=0 parche=1 ingenuo=0 roto=3 control=n/a)
+OK     002-ssrf-pdf-renderer/ (vulnerable=0 parche=1 ingenuo=0 roto=3 control=n/a)
+OK     003-insecure-deserialization-rce/ (vulnerable=0 parche=1 ingenuo=0 roto=3 control=n/a)
+OK     004-idor-object-authorization/ (vulnerable=0 parche=1 ingenuo=0 roto=3 control=n/a)
+OK     005-archive-path-traversal/ (vulnerable=0 parche=1 ingenuo=0 roto=3 control=n/a)
+OK     006-sql-injection-numeric-context/ (vulnerable=0 parche=1 ingenuo=0 roto=3 control=n/a)
+OK     007-cors-origin-reflection/ (vulnerable=0 parche=1 ingenuo=0 roto=3 control=n/a)
+OK     008-insecure-design-coupon-ledger/ (vulnerable=0 parche=1 ingenuo=0 roto=3 control=3)
+OK     009-truncated-hash-salt/ (vulnerable=0 parche=1 ingenuo=0 roto=3 control=3)
 
 9/9 capsulas: ataque RC 0, parche RC 1, parche ingenuo RC 0, sujeto roto RC 3
 OK     tabla del README: 9 filas, 9 directorios
