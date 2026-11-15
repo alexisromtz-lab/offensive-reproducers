@@ -48,22 +48,31 @@ Cuatro reglas que se comprueban, no se prometen:
 2. **Autocontenida.** Sólo biblioteca estándar. Nada que instalar.
 3. **Falsable.** El PoC decide por código de salida, no por lo que imprime.
 4. **Dual.** La misma corrida contra el parche debe fallar de forma determinista.
+5. **El cierre se gana, no se supone.** RC `1` sólo se emite cuando la cápsula completó sus
+   vías **y** comprobó que el sujeto sigue respondiendo a la entrada legítima. Un sujeto que
+   falla siempre —o que niega todo, incluido lo suyo— sale con RC `3`, no con `1`: un
+   corrector roto y un corrector que cierra son cosas distintas, y confundirlas da verde
+   al sujeto que peor funciona. `sujeto_roto.py` existe para que ese error no pueda volver.
 
 ## Verificar todo
 
 ```bash
 for capsula in [0-9][0-9][0-9]-*/; do
   cd "$capsula"
-  python3 exploit_poc.py >/dev/null;                 vulnerable=$?
-  python3 exploit_poc.py --app patch_secure.py >/dev/null; parche=$?
+  python3 exploit_poc.py >/dev/null 2>&1;                        vulnerable=$?
+  python3 exploit_poc.py --app patch_secure.py >/dev/null 2>&1;   parche=$?
+  python3 exploit_poc.py --app ../sujeto_roto.py >/dev/null 2>&1; roto=$?
   cd ..
-  if [ "$vulnerable" -eq 0 ] && [ "$parche" -eq 1 ]; then
+  if [ "$vulnerable" -eq 0 ] && [ "$parche" -eq 1 ] && [ "$roto" -eq 3 ]; then
     echo "OK: $capsula"
   else
-    echo "FALLA: $capsula (vulnerable=$vulnerable parche=$parche)"
+    echo "FALLA: $capsula (vulnerable=$vulnerable parche=$parche roto=$roto)"
   fi
 done
 ```
+
+El tercer modo es el que impide el falso verde: `sujeto_roto.py` falla siempre, así que
+cualquier cápsula que lo absuelva con `1` se declara FALLA en vez de pasar desapercibida.
 
 ## Licencia
 
