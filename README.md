@@ -1,8 +1,12 @@
 # offensive-reproducers
 
+[![capsulas](https://github.com/alexisromtz-lab/offensive-reproducers/actions/workflows/capsulas.yml/badge.svg)](https://github.com/alexisromtz-lab/offensive-reproducers/actions/workflows/capsulas.yml)
+
 Laboratorios sintéticos de seguridad ofensiva. Cada cápsula es un fallo real,
 reconstruido desde cero en código propio, con su exploit determinista y su parche.
 Todo corre en menos de diez segundos, sin dependencias externas y sin red externa.
+
+> **¿Tienes un servicio web o una API?** → [Trabajo sobre tu servicio](#trabajo-sobre-tu-servicio)
 
 ## Por qué existe
 
@@ -56,23 +60,51 @@ Cuatro reglas que se comprueban, no se prometen:
 
 ## Verificar todo
 
+Un solo comando comprueba las tres promesas en todas las cápsulas, y es el mismo que
+corre el CI en cada push — el badge de arriba es su resultado, no una promesa:
+
 ```bash
-for capsula in [0-9][0-9][0-9]-*/; do
-  cd "$capsula"
-  python3 exploit_poc.py >/dev/null 2>&1;                        vulnerable=$?
-  python3 exploit_poc.py --app patch_secure.py >/dev/null 2>&1;   parche=$?
-  python3 exploit_poc.py --app ../sujeto_roto.py >/dev/null 2>&1; roto=$?
-  cd ..
-  if [ "$vulnerable" -eq 0 ] && [ "$parche" -eq 1 ] && [ "$roto" -eq 3 ]; then
-    echo "OK: $capsula"
-  else
-    echo "FALLA: $capsula (vulnerable=$vulnerable parche=$parche roto=$roto)"
-  fi
-done
+./verificar-capsulas.sh
 ```
 
-El tercer modo es el que impide el falso verde: `sujeto_roto.py` falla siempre, así que
-cualquier cápsula que lo absuelva con `1` se declara FALLA en vez de pasar desapercibida.
+Cada cápsula se corre tres veces: contra el servicio vulnerable (RC 0), contra el parche
+(RC 1) y contra `sujeto_roto.py` (RC 3). El tercero es el que impide el falso verde: un
+sujeto que falla siempre no puede ser absuelto con `1`.
+
+Contra un clon en blanco, el 15-Nov-2026:
+
+```
+OK     001-jwt-algorithm-confusion/ (vulnerable=0 parche=1 roto=3)
+OK     002-ssrf-pdf-renderer/ (vulnerable=0 parche=1 roto=3)
+OK     003-insecure-deserialization-rce/ (vulnerable=0 parche=1 roto=3)
+OK     004-idor-object-authorization/ (vulnerable=0 parche=1 roto=3)
+OK     005-archive-path-traversal/ (vulnerable=0 parche=1 roto=3)
+OK     006-sql-injection-numeric-context/ (vulnerable=0 parche=1 roto=3)
+
+6/6 capsulas: ataque RC 0, parche RC 1, sujeto roto RC 3
+```
+
+Sin cápsulas el script falla en vez de salir en verde: un cero de inventario no es una
+verificación.
+
+## Trabajo sobre tu servicio
+
+Este repositorio es la **muestra de método**, no el resultado. El resultado es la
+revisión de tu servicio:
+
+1. **Se lee el código y se nombra el fallo** con la ruta y la línea exactas, no con
+   adjetivos.
+2. **Se escribe el PoC que lo demuestra** contra tu versión, en código ejecutable.
+3. **Se entrega el par rojo/verde**: el ataque que falla y el parche que lo cierra.
+
+**Lo que no es.** No es un sello de auditoría ni una garantía de cobertura total. Un
+informe que dice «no encontré nada relevante en este alcance» es un resultado posible,
+y se entrega con el mismo detalle que uno con hallazgos.
+
+**Contacto.** `alexis_romtz@hotmail.com` con el repositorio y el alcance que te
+interesa; el correo está también en [mi perfil](https://github.com/alexisromtz-lab).
+Se habla el alcance antes de que nadie pague nada. No pegues código de tu servicio en
+un issue público: un issue sirve para abrir la conversación, no para el análisis.
 
 ## Licencia
 

@@ -1,0 +1,24 @@
+name: capsulas
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  capsulas:
+    # Anclado, no `ubuntu-latest`: la etiqueta migra y una compuerta no debe
+    # cambiar de suelo sin que alguien lo decida.
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: version de python
+        run: python3 --version
+
+      - name: cada capsula explota en el vulnerable y se cierra en el parche
+        run: ./verificar-capsulas.sh
