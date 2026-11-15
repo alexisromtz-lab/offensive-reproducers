@@ -41,11 +41,11 @@ técnico reconstruido sobre un entorno mínimo propio.
 NNN-<vector>/
 ├── README.md           # hipótesis, anatomía del fallo, impacto y remedio
 ├── app_vulnerable.py   # servicio mínimo sintético, sólo biblioteca estándar
-├── exploit_poc.py      # PoC determinista: RC 0 explota, RC 1 bloqueado
+├── exploit_poc.py      # PoC determinista: RC 0 explota, RC 1 bloqueado, RC 3 sujeto roto
 └── patch_secure.py     # corrección canónica + el parche ingenuo, para refutarlo
 ```
 
-Cuatro reglas que se comprueban, no se prometen:
+Seis reglas que se comprueban, no se prometen:
 
 1. **Determinista.** Dos corridas, el mismo resultado. Sin reloj, sin azar, sin red externa.
    Las cápsulas que necesitan un servicio levantan uno efímero en `127.0.0.1` y lo apagan
@@ -58,31 +58,38 @@ Cuatro reglas que se comprueban, no se prometen:
    falla siempre —o que niega todo, incluido lo suyo— sale con RC `3`, no con `1`: un
    corrector roto y un corrector que cierra son cosas distintas, y confundirlas da verde
    al sujeto que peor funciona. `sujeto_roto.py` existe para que ese error no pueda volver.
+6. **El parche ingenuo se refuta, no se ilustra.** `patch_secure.py` incluye una corrección
+   que cierra el caso reportado y deja abierta la clase de fallo; `--naive` debe seguir
+   explotando. Si esa variante también cerrara, la cápsula estaría vendiendo una refutación
+   que no existe, y el verificador la marca como fallo en vez de absolverla.
 
 ## Verificar todo
 
-Un solo comando comprueba las tres promesas en todas las cápsulas, y es el mismo que
+Un solo comando comprueba las cuatro promesas en todas las cápsulas, y es el mismo que
 corre el CI en cada push — el badge de arriba es su resultado, no una promesa:
 
 ```bash
 ./verificar-capsulas.sh
 ```
 
-Cada cápsula se corre tres veces: contra el servicio vulnerable (RC 0), contra el parche
-(RC 1) y contra `sujeto_roto.py` (RC 3). El tercero es el que impide el falso verde: un
-sujeto que falla siempre no puede ser absuelto con `1`.
+Cada cápsula se corre cuatro veces: contra el servicio vulnerable (RC 0), contra el parche
+(RC 1), contra ese mismo parche en su variante ingenua —que debe **seguir cayendo** (RC 0)—
+y contra `sujeto_roto.py` (RC 3). Los dos últimos son los que impiden el falso verde: un
+parche que cierra sólo el caso reportado y deja abierta la clase de fallo se desenmascara
+en el tercero, y un sujeto que falla siempre no puede ser absuelto con `1`.
 
 Contra un clon en blanco, el 15-Nov-2026:
 
 ```
-OK     001-jwt-algorithm-confusion/ (vulnerable=0 parche=1 roto=3)
-OK     002-ssrf-pdf-renderer/ (vulnerable=0 parche=1 roto=3)
-OK     003-insecure-deserialization-rce/ (vulnerable=0 parche=1 roto=3)
-OK     004-idor-object-authorization/ (vulnerable=0 parche=1 roto=3)
-OK     005-archive-path-traversal/ (vulnerable=0 parche=1 roto=3)
-OK     006-sql-injection-numeric-context/ (vulnerable=0 parche=1 roto=3)
+OK     001-jwt-algorithm-confusion/ (vulnerable=0 parche=1 ingenuo=0 roto=3)
+OK     002-ssrf-pdf-renderer/ (vulnerable=0 parche=1 ingenuo=0 roto=3)
+OK     003-insecure-deserialization-rce/ (vulnerable=0 parche=1 ingenuo=0 roto=3)
+OK     004-idor-object-authorization/ (vulnerable=0 parche=1 ingenuo=0 roto=3)
+OK     005-archive-path-traversal/ (vulnerable=0 parche=1 ingenuo=0 roto=3)
+OK     006-sql-injection-numeric-context/ (vulnerable=0 parche=1 ingenuo=0 roto=3)
+OK     007-cors-origin-reflection/ (vulnerable=0 parche=1 ingenuo=0 roto=3)
 
-6/6 capsulas: ataque RC 0, parche RC 1, sujeto roto RC 3
+7/7 capsulas: ataque RC 0, parche RC 1, parche ingenuo RC 0, sujeto roto RC 3
 ```
 
 Sin cápsulas el script falla en vez de salir en verde: un cero de inventario no es una
