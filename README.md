@@ -29,6 +29,7 @@ técnico reconstruido sobre un entorno mínimo propio.
 | 004 | Autorización a nivel de objeto (IDOR) | [004-idor-object-authorization](004-idor-object-authorization/) | `python3 exploit_poc.py` |
 | 005 | Escritura fuera del destino con el nombre del miembro (tar-slip) | [005-archive-path-traversal](005-archive-path-traversal/) | `python3 exploit_poc.py` |
 | 006 | Inyección SQL en un contexto numérico (el comentario de bloque hace de espacio) | [006-sql-injection-numeric-context](006-sql-injection-numeric-context/) | `python3 exploit_poc.py` |
+| 007 | CORS que refleja el origen del atacante (mencionar el dominio no es serlo) | [007-cors-origin-reflection](007-cors-origin-reflection/) | `python3 exploit_poc.py` |
 
 ## Contrato de cada cápsula
 
