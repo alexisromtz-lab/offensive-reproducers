@@ -90,10 +90,13 @@ OK     006-sql-injection-numeric-context/ (vulnerable=0 parche=1 ingenuo=0 roto=
 OK     007-cors-origin-reflection/ (vulnerable=0 parche=1 ingenuo=0 roto=3)
 
 7/7 capsulas: ataque RC 0, parche RC 1, parche ingenuo RC 0, sujeto roto RC 3
+OK     tabla del README: 7 filas, 7 directorios
 ```
 
 Sin cápsulas el script falla en vez de salir en verde: un cero de inventario no es una
-verificación.
+verificación. Y la tabla de arriba se coteja contra los directorios en la misma corrida:
+una cápsula sin fila deja el anuncio corto y una fila sin cápsula promete lo que no existe;
+las dos cosas fallan el comando igual que una cápsula roja.
 
 ## Trabajo sobre tu servicio
 

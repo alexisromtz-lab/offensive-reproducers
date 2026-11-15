@@ -46,4 +46,23 @@ fi
 echo ""
 echo "$((total - fallos))/$total capsulas: ataque RC 0, parche RC 1, parche ingenuo RC 0, sujeto roto RC 3"
 
+# La tabla del README y los directorios divergen en silencio: una capsula nueva sin
+# fila deja el anuncio corto, y una fila sin directorio promete lo que no existe.
+# Se cotejan aqui, en el mismo comando que ya se corre en cada push.
+en_tabla=$(grep -oE '^\| [0-9]{3} \|' README.md | grep -oE '[0-9]{3}' | sort -u)
+en_disco=$(ls -d [0-9][0-9][0-9]-*/ 2>/dev/null | cut -c1-3 | sort -u)
+
+if [ "$en_tabla" = "$en_disco" ]; then
+  echo "OK     tabla del README: $total filas, $total directorios"
+else
+  echo "FALLA  la tabla del README no coincide con los directorios (- solo en tabla, + solo en disco):"
+  sobra=$(mktemp) || exit 1
+  falta=$(mktemp) || exit 1
+  printf '%s\n' "$en_tabla" >"$sobra"
+  printf '%s\n' "$en_disco" >"$falta"
+  comm -3 "$sobra" "$falta" | sed 's/^/       /'
+  rm -f "$sobra" "$falta"
+  fallos=$((fallos + 1))
+fi
+
 [ "$fallos" -eq 0 ] || exit 1
