@@ -107,4 +107,5 @@ canónico no es una denegación en bloque, es una política sobre direcciones.
 Material propio. Este repositorio no contiene material de ninguna plataforma de
 entrenamiento: ni salas, ni banderas, ni recorridos, ni capturas. El servicio interior, el
 servicio público, el renderizador, el exploit y el parche se escribieron desde cero para
-esta cápsula, y ninguno de los dos servicios escucha fuera de `127.0.0.1`.
+esta cápsula, y ninguno de los dos servicios escucha fuera de `127.0.0.1`. La referencia
+externa es la categoría pública **OWASP A10:2021 — Server-Side Request Forgery (SSRF)**.

@@ -25,17 +25,20 @@ técnico reconstruido sobre un entorno mínimo propio.
 
 ## Cápsulas
 
-| # | Vector | Sujeto | Comando |
-|---|--------|--------|---------|
-| 001 | Confusión de algoritmo en JWT (RS256 → HS256) | [001-jwt-algorithm-confusion](001-jwt-algorithm-confusion/) | `python3 exploit_poc.py` |
-| 002 | SSRF en un renderizador de URLs | [002-ssrf-pdf-renderer](002-ssrf-pdf-renderer/) | `python3 exploit_poc.py` |
-| 003 | Deserialización insegura (ejecución de código) | [003-insecure-deserialization-rce](003-insecure-deserialization-rce/) | `python3 exploit_poc.py` |
-| 004 | Autorización a nivel de objeto (IDOR) | [004-idor-object-authorization](004-idor-object-authorization/) | `python3 exploit_poc.py` |
-| 005 | Escritura fuera del destino con el nombre del miembro (tar-slip) | [005-archive-path-traversal](005-archive-path-traversal/) | `python3 exploit_poc.py` |
-| 006 | Inyección SQL en un contexto numérico (el comentario de bloque hace de espacio) | [006-sql-injection-numeric-context](006-sql-injection-numeric-context/) | `python3 exploit_poc.py` |
-| 007 | CORS que refleja el origen del atacante (mencionar el dominio no es serlo) | [007-cors-origin-reflection](007-cors-origin-reflection/) | `python3 exploit_poc.py` |
-| 008 | Cupón de un solo uso que nunca cuenta sus usos (la regla existe sólo como texto) | [008-insecure-design-coupon-ledger](008-insecure-design-coupon-ledger/) | `python3 exploit_poc.py` |
-| 009 | Digest truncado a cuatro hex (la sal cierra el informe, no el fallo) | [009-truncated-hash-salt](009-truncated-hash-salt/) | `python3 exploit_poc.py` |
+| # | Vector | OWASP 2021 | Sujeto | Comando |
+|---|--------|------------|--------|---------|
+| 001 | Confusión de algoritmo en JWT (RS256 → HS256) | A02 | [001-jwt-algorithm-confusion](001-jwt-algorithm-confusion/) | `python3 exploit_poc.py` |
+| 002 | SSRF en un renderizador de URLs | A10 | [002-ssrf-pdf-renderer](002-ssrf-pdf-renderer/) | `python3 exploit_poc.py` |
+| 003 | Deserialización insegura (ejecución de código) | A08 | [003-insecure-deserialization-rce](003-insecure-deserialization-rce/) | `python3 exploit_poc.py` |
+| 004 | Autorización a nivel de objeto (IDOR) | A01 | [004-idor-object-authorization](004-idor-object-authorization/) | `python3 exploit_poc.py` |
+| 005 | Escritura fuera del destino con el nombre del miembro (tar-slip) | A01 | [005-archive-path-traversal](005-archive-path-traversal/) | `python3 exploit_poc.py` |
+| 006 | Inyección SQL en un contexto numérico (el comentario de bloque hace de espacio) | A03 | [006-sql-injection-numeric-context](006-sql-injection-numeric-context/) | `python3 exploit_poc.py` |
+| 007 | CORS que refleja el origen del atacante (mencionar el dominio no es serlo) | A05 | [007-cors-origin-reflection](007-cors-origin-reflection/) | `python3 exploit_poc.py` |
+| 008 | Cupón de un solo uso que nunca cuenta sus usos (la regla existe sólo como texto) | A04 | [008-insecure-design-coupon-ledger](008-insecure-design-coupon-ledger/) | `python3 exploit_poc.py` |
+| 009 | Digest truncado a cuatro hex (la sal cierra el informe, no el fallo) | A02 | [009-truncated-hash-salt](009-truncated-hash-salt/) | `python3 exploit_poc.py` |
+
+**Cobertura OWASP Top 10 (2021): siete de las diez categorías.** A01 cubierta por 004 y 005 · A02 por 001 y 009 · A03 por 006 · A04 por 008 · A05 por 007 · A08 por 003 · A10 por 002. Fuera quedan A06 (componentes vulnerables y desactualizados), A07 (fallos de identificación y autenticación) y A09 (fallos de registro y monitoreo), que no tienen cápsula. La tabla se coteja contra los directorios en `./verificar-capsulas.sh`; esta línea se mide con
+`grep -hoE 'A(0[0-9]|10):2021' */README.md | sort -u`.
 
 ## Contrato de cada cápsula
 

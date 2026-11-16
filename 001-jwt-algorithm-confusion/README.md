@@ -79,7 +79,8 @@ Material propio. Este repositorio no contiene material de ninguna plataforma de
 entrenamiento: ni salas, ni banderas, ni recorridos, ni capturas. El vector técnico y el
 código se escribieron desde cero; la clave RSA es el vector de prueba público del
 [RFC 7515](https://www.rfc-editor.org/rfc/rfc7515), Apéndice A.2, y se puede auditar con
-`openssl rsa -pubin -in pub.pem -noout -text`.
+`openssl rsa -pubin -in pub.pem -noout -text`. La referencia externa es la categoría
+pública **OWASP A02:2021 — Cryptographic Failures**.
 
 ```bash
 python3 -c 'import app_vulnerable; print(app_vulnerable.public_pem())' > pub.pem
