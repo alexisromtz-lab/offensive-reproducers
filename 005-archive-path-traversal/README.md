@@ -108,5 +108,7 @@ como cápsula propia, no como vía de ésta.
 ## Procedencia
 
 Cápsula escrita desde cero para este repositorio. No reproduce ninguna sala, máquina ni reto de
-ninguna plataforma: los archivos, el servicio y el ataque son de este archivo. Licencia MIT del
+ninguna plataforma: los archivos, el servicio y el ataque son de este archivo. La referencia
+externa es la categoría pública **OWASP A01:2021 — Broken Access Control**, que en la edición de
+2021 absorbe el recorrido de rutas y la autorización a nivel de objeto. Licencia MIT del
 repositorio.

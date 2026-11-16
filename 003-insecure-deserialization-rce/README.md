@@ -122,4 +122,6 @@ Material propio. Este repositorio no contiene material de ninguna plataforma de
 entrenamiento: ni salas, ni banderas, ni recorridos, ni capturas. El servicio, el
 serializador, la sonda, el exploit y el parche se escribieron desde cero para esta cápsula.
 La clave HMAC es de laboratorio y está escrita en el código a propósito, para que la
-cápsula corra sin configuración; en un despliegue real no viaja en el repositorio.
+cápsula corra sin configuración; en un despliegue real no viaja en el repositorio. La
+referencia externa es la categoría pública **OWASP A08:2021 — Software and Data Integrity
+Failures**.
