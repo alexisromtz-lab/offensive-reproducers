@@ -36,8 +36,9 @@ técnico reconstruido sobre un entorno mínimo propio.
 | 007 | CORS que refleja el origen del atacante (mencionar el dominio no es serlo) | A05 | [007-cors-origin-reflection](007-cors-origin-reflection/) | `python3 exploit_poc.py` |
 | 008 | Cupón de un solo uso que nunca cuenta sus usos (la regla existe sólo como texto) | A04 | [008-insecure-design-coupon-ledger](008-insecure-design-coupon-ledger/) | `python3 exploit_poc.py` |
 | 009 | Digest truncado a cuatro hex (la sal cierra el informe, no el fallo) | A02 | [009-truncated-hash-salt](009-truncated-hash-salt/) | `python3 exploit_poc.py` |
+| 010 | La validación acepta lo que su propia serialización no devuelve (`inf` que se guarda `null`) | A08 | [010-serialization-validation-asymmetry](010-serialization-validation-asymmetry/) | `python3 exploit_poc.py` |
 
-**Cobertura OWASP Top 10 (2021): siete de las diez categorías.** A01 cubierta por 004 y 005 · A02 por 001 y 009 · A03 por 006 · A04 por 008 · A05 por 007 · A08 por 003 · A10 por 002. Fuera quedan A06 (componentes vulnerables y desactualizados), A07 (fallos de identificación y autenticación) y A09 (fallos de registro y monitoreo), que no tienen cápsula. La tabla se coteja contra los directorios en `./verificar-capsulas.sh`; esta línea se mide con
+**Cobertura OWASP Top 10 (2021): siete de las diez categorías.** A01 cubierta por 004 y 005 · A02 por 001 y 009 · A03 por 006 · A04 por 008 · A05 por 007 · A08 por 003 y 010 · A10 por 002. Fuera quedan A06 (componentes vulnerables y desactualizados), A07 (fallos de identificación y autenticación) y A09 (fallos de registro y monitoreo), que no tienen cápsula. La tabla se coteja contra los directorios en `./verificar-capsulas.sh`; esta línea se mide con
 `grep -hoE 'A(0[0-9]|10):2021' */README.md | sort -u`.
 
 ## Contrato de cada cápsula
@@ -85,10 +86,11 @@ en el tercero, y un sujeto que falla siempre no puede ser absuelto con `1`.
 
 La quinta: cada `control_*.py` que una cápsula declara se corre y debe dar **RC 3**. Ahí
 viven las promesas que el README de esa cápsula escribe con palabras —«un error interno no
-es un cupón cerrado» (008), «una deducción no es una apertura» (009)—, de modo que si
-dejaran de cumplirse el comando se pone rojo en vez de seguir contando la historia.
+es un cupón cerrado» (008), «una deducción no es una apertura» (009), «un asiento que no
+existe no es un asiento bloqueado» (010)—, de modo que si dejaran de cumplirse el comando se
+pone rojo en vez de seguir contando la historia.
 
-Contra un clon en blanco, el 15-Nov-2026:
+Contra un clon en blanco, el 16-Nov-2026:
 
 ```
 OK     001-jwt-algorithm-confusion/ (vulnerable=0 parche=1 ingenuo=0 roto=3 control=n/a)
@@ -100,9 +102,10 @@ OK     006-sql-injection-numeric-context/ (vulnerable=0 parche=1 ingenuo=0 roto=
 OK     007-cors-origin-reflection/ (vulnerable=0 parche=1 ingenuo=0 roto=3 control=n/a)
 OK     008-insecure-design-coupon-ledger/ (vulnerable=0 parche=1 ingenuo=0 roto=3 control=3)
 OK     009-truncated-hash-salt/ (vulnerable=0 parche=1 ingenuo=0 roto=3 control=3)
+OK     010-serialization-validation-asymmetry/ (vulnerable=0 parche=1 ingenuo=0 roto=3 control=3)
 
-9/9 capsulas: ataque RC 0, parche RC 1, parche ingenuo RC 0, sujeto roto RC 3
-OK     tabla del README: 9 filas, 9 directorios
+10/10 capsulas: ataque RC 0, parche RC 1, parche ingenuo RC 0, sujeto roto RC 3
+OK     tabla del README: 10 filas, 10 directorios
 ```
 
 Sin cápsulas el script falla en vez de salir en verde: un cero de inventario no es una
