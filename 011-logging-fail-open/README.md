@@ -138,6 +138,22 @@ en cada push.
 Para A09 el falso verde tiene precisamente esa forma: «no hay eventos» se lee como «no hay
 incidentes», y los dos enunciados son incompatibles con un sistema que funciona.
 
+## El falsador del oráculo
+
+Un PoC que certifica tiene que fallar cuando el sujeto miente. Este asienta el efecto y **después**
+declara el rechazo `ValueError` —el gesto más plausible de un parche apresurado, «revierto lo que no
+puedo registrar» sin revertir nada—:
+
+| oráculo | contra el mutante | RC |
+|---|---|---|
+| primera versión | `BLOQUEADO`, y su propia línea `[MEDICION]` decía *2 operaciones sin prueba* | **1** |
+| esta versión | `A CIEGAS` — «un rechazo que no deshace el efecto no es un cierre» | **0** |
+
+La contradicción estaba impresa en la salida y nadie la leía: el `[MEDICION]` contaba los movimientos
+sin prueba y las vías ya habían devuelto `RECHAZADA` sin mirar. Se corrigió midiendo el rechazo,
+no creyéndolo. La matriz de arriba no cambió: los tres sujetos reales dan los mismos RC antes y
+después (medido, `0 / 0 / 1 / 3 / 3`).
+
 ## Frontera: qué NO demuestra
 
 - **`RC 1` no dice que el sistema sea auditable.** Dice que ninguna de las dos vías dejó un efecto
@@ -153,7 +169,9 @@ incidentes», y los dos enunciados son incompatibles con un sistema que funciona
 - **`RECHAZADA` se lee como cierre y puede ser un falso cierre.** Un sujeto que rechazara *todo*
   pasaría las dos vías con esa etiqueta; el control legítimo es lo que lo impide. La distinción
   entre «rechazo declarado» (`ValueError`) y «rotura» (cualquier otra excepción) sostiene la
-  etiqueta.
+  etiqueta, y el rechazo **se mide**: si el efecto quedó asentado igual, la vía vale `[A CIEGAS]`.
+  Esa comprobación no estaba en la primera versión de este PoC y la añadió un revisor que señaló el
+  hueco; el falsador está abajo, con un mutante que asienta el efecto y después declara el rechazo.
 - **No mide el coste de fallar cerrado.** Rechazar operaciones con el registro caído es un
   intercambio entre disponibilidad y trazabilidad. La cápsula elige trazabilidad y no cuantifica lo
   que cuesta; una caja de pagos podría elegir lo contrario, y esa decisión no se toma aquí.
@@ -169,6 +187,7 @@ class FlujoRoto:                     # el sumidero que no admite escrituras
 
 log = logging.getLogger("auditoria")
 log.addHandler(logging.StreamHandler(FlujoRoto()))
+log.setLevel(logging.INFO)           # sin esto el registro no llega ni al sumidero
 log.info("transferencia 10.0")       # no lanza: imprime "--- Logging error ---" y sigue
 ```
 
@@ -177,6 +196,11 @@ en `Handler.handle` —un `emit` que lanza sí propaga, medido— sino en `Strea
 (`logging/__init__.py:1086`), que desvía el fallo a `handleError` y devuelve el control al
 llamador. Es decir: **fallar abierto es la política de fábrica del registro**, y cualquier capa que
 lo envuelva hereda la forma.
+
+El `setLevel` no es adorno: es la primera medición del propio fragmento. Sin él el logger hereda el
+nivel `WARNING` de la raíz y `log.info` se descarta **antes** de tocar el sumidero —sin traza, sin
+`--- Logging error ---`, sin nada—, que es la variante más barata de la misma pérdida: el evento no
+llega, y la llamada tampoco avisa. El fragmento de arriba es el que se midió, no uno parecido.
 
 La diferencia con esta cápsula es de grado, y se dice: la biblioteca al menos grita a `stderr`; el
 sujeto no grita nada y además cuenta la llamada como si el asiento existiera. Lo que se publica es
