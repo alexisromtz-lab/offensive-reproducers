@@ -142,7 +142,19 @@ incidentes», y los dos enunciados son incompatibles con un sistema que funciona
 
 Un PoC que certifica tiene que fallar cuando el sujeto miente. Este asienta el efecto y **después**
 declara el rechazo `ValueError` —el gesto más plausible de un parche apresurado, «revierto lo que no
-puedo registrar» sin revertir nada—:
+puedo registrar» sin revertir nada—. Es una línea sobre `patch_secure.py`, y la cápsula sigue
+teniendo cinco archivos porque el mutante es un diff, no un sujeto:
+
+```diff
+ def _ejecutar_canonico(orden_id: str, monto: float) -> dict[str, Any]:
+     _validar(monto)
+     evento = _evento(orden_id, monto)
++    MOVIMIENTOS[orden_id] = {"orden": orden_id, "monto": monto}
+     try:
+         _escribir_evento(evento)
+     except SumideroNoDisponible as exc:
+         raise Rechazo(f"sin rastro durable no hay operación: {exc}") from exc
+```
 
 | oráculo | contra el mutante | RC |
 |---|---|---|
