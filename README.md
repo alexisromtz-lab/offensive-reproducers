@@ -57,7 +57,7 @@ NNN-<vector>/
 └── patch_secure.py     # corrección canónica + el parche ingenuo, para refutarlo
 ```
 
-Siete reglas que se comprueban, no se prometen:
+Ocho reglas que se comprueban, no se prometen:
 
 1. **Determinista.** Dos corridas, el mismo resultado. Sin reloj, sin azar, sin red externa.
    Las cápsulas que necesitan un servicio levantan uno efímero en `127.0.0.1` y lo apagan
@@ -80,14 +80,22 @@ Siete reglas que se comprueban, no se prometen:
    significa que se la creyó. Las cápsulas cuyo efecto es el valor de retorno no pueden
    auditarse así, y lo declaran en vez de callarlo: `invariante: retorno` ·
    `falsador: fuera-de-alcance`.
+8. **La declaración se coteja, no se decora.** `invariante:` y `falsador:` no son dos
+   etiquetas: son la misma afirmación dicha dos veces, porque `fuera-de-alcance` **se define**
+   como «el efecto es el valor de retorno… no hay estado que mirar». Una cápsula que declare
+   `invariante: retorno` con `falsador: verifica` está afirmando que su PoC mira el estado y
+   que no hay estado que mirar; el verificador la pone roja (`PAREJA`) en vez de absolverla.
+   Ese cotejo también tiene lector: `./verificar-capsulas.sh --self-test` planta la
+   contradicción en un directorio temporal, exige el rojo, la deshace y exige el verde.
 
 ## Verificar todo
 
-Un solo comando comprueba las siete promesas en todas las cápsulas, y es el mismo que
+Un solo comando comprueba las ocho promesas en todas las cápsulas, y es el mismo que
 corre el CI en cada push — el badge de arriba es su resultado, no una promesa:
 
 ```bash
-./verificar-capsulas.sh
+./verificar-capsulas.sh             # las ocho reglas sobre todas las cápsulas
+./verificar-capsulas.sh --self-test # el cotejo de la pareja se falsa a sí mismo
 ```
 
 Cada cápsula se corre cuatro veces: contra el servicio vulnerable (RC 0), contra el parche
@@ -106,9 +114,12 @@ pone rojo en vez de seguir contando la historia.
 La sexta: si el README de la cápsula declara `falsador: verifica`, el PoC se corre contra
 `parche_mentiroso.py` y debe dar **RC 0**. Un `invariante:` o un `falsador:` ausente, o con
 un valor que el verificador no conozca, es fallo; la única forma de saltarse esta prueba es
-declararlo por escrito y que el lector lo cuente como lo que es. La séptima la cierra el
-cotejo de la tabla de arriba contra los directorios que existen: una
-cápsula sin fila, o una fila sin cápsula, también se pone roja.
+declararlo por escrito y que el lector lo cuente como lo que es. La séptima coteja la
+**pareja**: `invariante:` y `falsador:` son la misma afirmación, así que `retorno` con
+`verifica` —o `estado` con `fuera-de-alcance`— se nombra `PAREJA` y se pone roja, porque
+declarar que el PoC mira el estado y que no hay estado que mirar no es una cápsula débil: es
+una contradicción. La octava la cierra el cotejo de la tabla de arriba contra los directorios
+que existen: una cápsula sin fila, o una fila sin cápsula, también se pone roja.
 
 Y una regla que el PoC cobra antes de que el gate la vea: **sin `--naive`, todas las vías
 tienen que coincidir.** Un veredicto que satisface a una sola esconde la regresión de la
@@ -135,6 +146,8 @@ OK     013-session-survives-credential-change/ (vulnerable=0 parche=1 ingenuo=0 
 12/12 capsulas: ataque RC 0, parche RC 1, parche ingenuo RC 0, sujeto roto RC 3
 4/12 capsulas declaran 'falsador: verifica' y su PoC no se cree un rechazo declarado;
 el resto publica su censo en el README (fuera-de-alcance · no-medido · cuelga · roto).
+7/12 declaran 'invariante: estado' (el falsificador tiene libro que mirar) y
+5/12 'invariante: retorno' (el efecto es el valor de retorno): pareja cotejada con 'falsador:' en esta corrida.
 OK     tabla del README: 12 filas, 12 directorios
 ```
 
@@ -186,6 +199,14 @@ ejecutarlo: **si el invariante de una cápsula es de retorno, un parche que mien
 inauditable por construcción** —la mentira no deja huella— y eso no es una tarea pendiente,
 es una frontera del instrumento. Si el invariante es de **estado**, el falsificador tiene algo
 que mirar y la cápsula puede certificarse.
+
+Esa frontera se declaraba y no se cotejaba. Hasta el 17-Nov-2026 el verificador leía las dos
+líneas, validaba su vocabulario y las daba por buenas **por separado**: una cápsula con
+`invariante: retorno` y `falsador: verifica` salía con RC `0` —medido con la contradicción
+plantada en un directorio temporal antes de escribir el cotejo—, es decir, el catálogo
+certificaba a la vez «mi PoC mira el estado» y «no hay estado que mirar». Hoy la pareja es la
+séptima regla y `--self-test` la falsa en cada push: sin ese modo, el cotejo sería otra marca
+sin lector y nadie sabría si sigue mirando.
 
 Esa frontera se publicó de las dos direcciones. `005` y `010` estaban **engañadas** el
 16-Nov-2026: las dos tenían la comprobación de estado escrita y no la consultaban dentro del

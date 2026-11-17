@@ -20,5 +20,10 @@ jobs:
       - name: version de python
         run: python3 --version
 
+      # El cotejo de la pareja tambien necesita lector: si alguien lo borra, este paso se
+      # pone rojo antes de que el gate grande siga dando verde sobre las declaraciones.
+      - name: el cotejo de la pareja se falsa a si mismo
+        run: ./verificar-capsulas.sh --self-test
+
       - name: cada capsula explota en el vulnerable y se cierra en el parche
         run: ./verificar-capsulas.sh
