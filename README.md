@@ -125,7 +125,7 @@ corre el CI en cada push — el badge de arriba es su resultado, no una promesa:
 
 ```bash
 ./verificar-capsulas.sh             # las once reglas sobre todas las cápsulas
-./verificar-capsulas.sh --self-test # la pareja, la frontera, su alcance, el entorno, el vocabulario y el reloj se falsan a sí mismos
+./verificar-capsulas.sh --self-test # la pareja, la frontera, su alcance, el entorno, el vocabulario, el reloj y el censo de los siete se falsan a sí mismos
 ```
 
 Cada cápsula se corre cuatro veces: contra el servicio vulnerable (RC 0), contra el parche
@@ -308,6 +308,21 @@ que un `.py` que escriba el sujeto no se importe solo. El sexto brazo del `--sel
 por conducta y sin tocar el `HOME` real —el entorno heredado es la trampa, y el mismo PoC sin
 jaula es su control positivo—: revertido el pinchazo, el brazo se pone rojo nombrando los dos
 archivos y los cinco anteriores siguen verdes.
+
+Y el último alcance era el más barato de todos: el del propio censo de brazos. Seis brazos se
+falsaban a sí mismos, pero el número seis vivía en este archivo y en ningún lector, así que
+borrar un brazo del script dejaba `--self-test` en `RC 0` con un brazo menos —y con la frase
+«el instrumento se falsa a sí mismo» igual de cierta con siete brazos que con uno—. Es la misma
+clase de defecto que las seis marcas anteriores, un nivel más arriba: no el alcance de una
+puerta, el de las puertas. Un brazo ausente no deja residuo, sólo silencio, y el silencio no es
+un cero. Hoy el conjunto se declara por nombre en `CENSO_BRAZOS` y la corrida se coteja contra
+él a la salida: lo que falta se nombra y lo que sobra también. El **séptimo brazo** falsa ese
+cotejo en las dos direcciones sin recursión —le quita `entorno` a lo ejercido y exige que
+muerda, le da el conjunto completo y exige que calle—, y el cotejo final vive fuera de él para
+que borrar el séptimo tampoco borre su lector. Comprobado que muerde: sin el brazo del entorno,
+`RC 1` nombrando `entorno`; sin el séptimo, `RC 1` nombrando `censo`. Lo que este lector no
+puede impedir es que se borren los siete y el cotejo a la vez: un guardián no puede guardarse a
+sí mismo, y ahí la única huella es el `diff` del acto.
 
 Y el vocabulario del censo tampoco era una promesa. `no-medido`, `roto` y `cuelga` eran tres
 valores que el verificador aceptaba con un `;;` vacío —leídos y no usados— mientras el censo los

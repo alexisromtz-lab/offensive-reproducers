@@ -29,6 +29,13 @@
 # solo alcance-- y el sexto brazo del `--self-test` lo falsa por conducta, con el entorno
 # heredado como trampa y el mismo PoC sin jaula como control positivo.
 #
+# El censo de los brazos, el 17-Nov-2026: seis brazos se falsaban a si mismos, pero el numero
+# seis vivia en el README y en ningun lector. Medido: borrar el brazo del entorno dejaba
+# `--self-test` en RC 0 con un brazo menos, asi que «el instrumento se falsa a si mismo» era
+# cierto con siete brazos y con uno. Un brazo ausente no deja residuo, solo silencio, y el
+# silencio no es un cero: ahora el conjunto se declara por nombre y la corrida se coteja
+# contra el a la salida. Un brazo que falta se nombra; uno que sobra, tambien.
+#
 # La decima: todo valor que el censo publica tiene lector. `no-medido`, `roto` y `cuelga`
 # pasaban por un `;;` vacio mientras el censo los imprimia como datos. Desde el 17-Nov-2026
 # se miden contra el mismo falsificador que los provoca: un vocabulario que crece sin lector
@@ -147,6 +154,32 @@ PY
   rm -rf "$jaula" "$casa"
 }
 
+# El conjunto de brazos que el `--self-test` declara ejercer, por nombre. La lista se declara
+# aqui y el cotejo vive al final de `self_test()`: borrar un brazo lo deja fuera de lo
+# ejercido y el cotejo lo nombra. Declarar el numero en vez de los nombres no serviria --un
+# brazo se puede sustituir por otro y el total no se mueve--.
+CENSO_BRAZOS="pareja frontera vocabulario tiempo alcance entorno censo"
+
+# Coteja lo ejercido contra lo declarado, dos listas de nombres separados por espacio. Publica
+# cada diferencia con nombre propio y devuelve RC 1 si hay alguna. Es puro a proposito: recibe
+# los dos conjuntos por argumento y no lee el script, para que el septimo brazo pueda falsarlo
+# sin recursion --un brazo que corriera `--self-test` dentro de `--self-test` duplicaria el
+# coste y mediria su propio reflejo--.
+cotejar_censo() {
+  python3 - "$1" "$2" <<'PY'
+import sys
+ejercidos = set(sys.argv[1].split())
+declarados = set(sys.argv[2].split())
+faltan = sorted(declarados - ejercidos)
+sobran = sorted(ejercidos - declarados)
+if faltan:
+    print("FALLA  --self-test censo: el censo declara brazos que la corrida no ejercio: %s" % ", ".join(faltan))
+if sobran:
+    print("FALLA  --self-test censo: la corrida ejercio brazos que el censo no declara: %s" % ", ".join(sobran))
+raise SystemExit(1 if (faltan or sobran) else 0)
+PY
+}
+
 # Sin esta prueba el cotejo seria otra marca sin lector: nadie sabria si sigue mirando. Se
 # copia una capsula que hoy certifica, se le cambia `invariante:` por `retorno` --dejando
 # `falsador: verifica`, que es la contradiccion-- y se exige RC distinto de 0 con la palabra
@@ -154,6 +187,8 @@ PY
 # direcciones: caza la mentira y no acusa a la capsula sana.
 self_test() {
   origen=$(cd "$(dirname "$0")" && pwd) || return 1
+  brazos_ok=""
+  n_brazos=$(printf '%s\n' $CENSO_BRAZOS | wc -w | tr -d ' ')
   capsula=$(cd "$origen" && ls -d [0-9][0-9][0-9]-*/ 2>/dev/null | while read -r c; do
     if grep -q '^falsador: verifica' "$c"README.md 2>/dev/null; then echo "$c"; break; fi
   done)
@@ -187,6 +222,7 @@ self_test() {
     return 1
   fi
   echo "OK     --self-test: 'invariante: retorno' con 'falsador: verifica' -> RC $rc_contradiccion nombrando PAREJA; la misma capsula con lo que declara hoy -> RC 0"
+  brazos_ok="$brazos_ok pareja"
 
   # Segundo brazo, la frontera: una capsula que declara no tener libro y cuyo PoC escribe uno
   # tiene que salir roja nombrando FRONTERA; la misma capsula sin escribir, verde. Medido el
@@ -236,6 +272,7 @@ POC
     return 1
   fi
   echo "OK     --self-test: PoC que escribe con 'falsador: fuera-de-alcance' -> RC $rc_residuo nombrando FRONTERA; el mismo PoC sin escribir -> RC 0"
+  brazos_ok="$brazos_ok frontera"
 
   # Tercer brazo, el vocabulario: una etiqueta del censo que no se mide es prosa con formato
   # de dato. Se plantan las tres mentiras --mas una verdad del mismo tipo-- y se exige que
@@ -311,6 +348,7 @@ POC
     return 1
   fi
   echo "OK     --self-test: 'no-medido' con fingidos>0, 'roto' con RC 0, 'cuelga' que termina e 'invariante: tiempo' -> RC $rc_etiquetas nombrando NO-MEDIDO, ROTO, CUELGA y TIPO; el 'roto' verdadero -> RC 0"
+  brazos_ok="$brazos_ok vocabulario"
 
   # Cuarto brazo, la dimension temporal: `reloj:` afirma que el sujeto pregunta la hora. Se
   # plantan dos capsulas --una que cambia de veredicto cuando el instante se mueve y otra que
@@ -363,6 +401,7 @@ POC
     return 1
   fi
   echo "OK     --self-test: 'reloj: AHORA' ignorado -> RC $rc_reloj nombrando RELOJ; el mismo campo con un veredicto que cambia -> RC 0"
+  brazos_ok="$brazos_ok tiempo"
 
   # Quinto brazo, el alcance de la foto: la novena regla medía el residuo solo donde miraba, y
   # un PoC que escribia por `tempfile` o por `~` publicaba `0 con residuo` con la capsula en
@@ -416,6 +455,7 @@ POC
     return 1
   fi
   echo "OK     --self-test: PoC que escapa por 'tempfile' y '~' -> RC $rc_alcance nombrando FRONTERA; el mismo PoC sin escapar -> RC 0"
+  brazos_ok="$brazos_ok alcance"
 
   # Sexto brazo, el entorno de las otras dos puertas: el quinto mide el alcance de la foto y
   # residuo_en_jaula pincha HOME/TMPDIR/XDG, pero con_limite y reloj_en_jaula heredaban los del
@@ -454,6 +494,40 @@ POC
     return 1
   fi
   echo "OK     --self-test: 'tempfile' y '~' bajo con_limite y reloj_en_jaula -> 0 archivo(s) fuera de su casa; el mismo PoC sin jaula -> $n_pos"
+  brazos_ok="$brazos_ok entorno"
+
+  # Septimo brazo, el censo de los brazos: los seis anteriores se falsan a si mismos, pero
+  # nadie medía cuantos eran. Medido el 17-Nov-2026: el numero seis vivia en el README y no en
+  # un lector, asi que borrar el brazo del entorno dejaba la corrida en RC 0 con un brazo
+  # menos. Aqui se falsa el cotejo en las dos direcciones: se le quita `entorno` a lo ejercido
+  # y se exige que muerda nombrandolo; se le da el censo entero y se exige que calle.
+  salida_censo=$(cotejar_censo "pareja frontera vocabulario tiempo alcance censo" "$CENSO_BRAZOS")
+  rc_censo=$?
+  nombrado_censo=$(printf '%s\n' "$salida_censo" | grep -c 'entorno')
+  (cotejar_censo "$CENSO_BRAZOS" "$CENSO_BRAZOS" >/dev/null 2>&1)
+  rc_censo_sano=$?
+
+  if [ "$rc_censo" -eq 0 ] || [ "$nombrado_censo" -eq 0 ]; then
+    echo "FALLA  --self-test: el censo no mordio al brazo ausente (RC $rc_censo, 'entorno' nombrado $nombrado_censo veces)"
+    return 1
+  fi
+  if [ "$rc_censo_sano" -ne 0 ]; then
+    echo "FALLA  --self-test: el censo acuso al conjunto completo (RC $rc_censo_sano)"
+    return 1
+  fi
+  echo "OK     --self-test: censo de $n_brazos brazos cotejado por nombre; sin 'entorno' -> RC $rc_censo nombrandolo; con el censo entero -> RC 0"
+  brazos_ok="$brazos_ok censo"
+
+  # Cotejo final, incondicional y fuera del septimo brazo: si un brazo desaparece del codigo no
+  # ejecuta su propio apunte, y el silencio es su unica huella. Puesto aqui, borrar el septimo
+  # tampoco borra su lector --el cotejo sigue viendo que falta `censo`--.
+  salida_final=$(cotejar_censo "$brazos_ok" "$CENSO_BRAZOS")
+  rc_final=$?
+  if [ "$rc_final" -ne 0 ]; then
+    printf '%s\n' "$salida_final"
+    return 1
+  fi
+  echo "OK     --self-test: $n_brazos brazos ejercidos, todos declarados en el censo"
   return 0
 }
 
