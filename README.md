@@ -57,7 +57,7 @@ NNN-<vector>/
 └── patch_secure.py     # corrección canónica + el parche ingenuo, para refutarlo
 ```
 
-Nueve reglas que se comprueban, no se prometen:
+Diez reglas que se comprueban, no se prometen:
 
 1. **Determinista.** Dos corridas, el mismo resultado. Sin reloj, sin azar, sin red externa.
    Las cápsulas que necesitan un servicio levantan uno efímero en `127.0.0.1` y lo apagan
@@ -93,15 +93,23 @@ Nueve reglas que se comprueban, no se prometen:
    cápsulas, cero residuo—, y desde entonces lo comprueba el gate. Una cápsula que declara no
    tener libro y escribe uno se nombra `FRONTERA` y se pone roja: es el falso verde en la
    dirección peligrosa, porque lo que el lector cree que el PoC no toca, ya lo tocó.
+10. **Toda etiqueta del censo tiene lector.** Un `falsador:` que el verificador acepta y no
+   mide es prosa con formato de dato. El 17-Nov-2026 se midió el vocabulario entero: `roto`
+   exige `RC 3` contra el falsificador, `cuelga` exige que el PoC **no termine** en el límite
+   declarado, y `no-medido` exige `rechazos fingidos=0` en el contador que el propio
+   falsificador ya publicaba. Los tres valores eran verdad; ninguno se estaba comprobando.
+   La misma regla cierra el eje de los tipos: un `invariante:` fuera de `estado` y `retorno`
+   —`tiempo`, `concurrencia`— se nombra `TIPO` y no entra, porque un tipo de oráculo se abre
+   construyendo su lector, no escribiendo una cápsula.
 
 ## Verificar todo
 
-Un solo comando comprueba las nueve promesas en todas las cápsulas, y es el mismo que
+Un solo comando comprueba las diez promesas en todas las cápsulas, y es el mismo que
 corre el CI en cada push — el badge de arriba es su resultado, no una promesa:
 
 ```bash
-./verificar-capsulas.sh             # las nueve reglas sobre todas las cápsulas
-./verificar-capsulas.sh --self-test # la pareja y la frontera se falsan a sí mismas
+./verificar-capsulas.sh             # las diez reglas sobre todas las cápsulas
+./verificar-capsulas.sh --self-test # la pareja, la frontera y el vocabulario se falsan a sí mismos
 ```
 
 Cada cápsula se corre cuatro veces: contra el servicio vulnerable (RC 0), contra el parche
@@ -128,7 +136,9 @@ una contradicción. La octava la cierra el cotejo de la tabla de arriba contra l
 que existen: una cápsula sin fila, o una fila sin cápsula, también se pone roja. La novena
 mide la frontera en vez de creerla: si una cápsula declara `fuera-de-alcance`, su PoC corre en
 una jaula y el árbol de archivos se coteja antes y después; escribir algo ahí es `FRONTERA` y
-es rojo.
+es rojo. La décima lee el resto del vocabulario, que hasta el 17-Nov-2026 pasaba por un `;;`
+vacío: `roto` exige `RC 3`, `cuelga` exige no terminar dentro del límite y `no-medido` exige
+`rechazos fingidos=0`; un valor fuera de esos cinco se nombra y se para.
 
 Y una regla que el PoC cobra antes de que el gate la vea: **sin `--naive`, todas las vías
 tienen que coincidir.** Un veredicto que satisface a una sola esconde la regresión de la
@@ -141,24 +151,27 @@ Contra un clon en blanco, el 17-Nov-2026:
 ```
 OK     001-jwt-algorithm-confusion/ (vulnerable=0 parche=1 ingenuo=0 roto=3 control=n/a falsador=fuera-de-alcance+medido)
 OK     002-ssrf-pdf-renderer/ (vulnerable=0 parche=1 ingenuo=0 roto=3 control=n/a falsador=fuera-de-alcance+medido)
-OK     003-insecure-deserialization-rce/ (vulnerable=0 parche=1 ingenuo=0 roto=3 control=n/a falsador=no-medido)
-OK     004-idor-object-authorization/ (vulnerable=0 parche=1 ingenuo=0 roto=3 control=n/a falsador=roto)
+OK     003-insecure-deserialization-rce/ (vulnerable=0 parche=1 ingenuo=0 roto=3 control=n/a falsador=no-medido+medido)
+OK     004-idor-object-authorization/ (vulnerable=0 parche=1 ingenuo=0 roto=3 control=n/a falsador=roto+medido)
 OK     005-archive-path-traversal/ (vulnerable=0 parche=1 ingenuo=0 roto=3 control=n/a falsador=verifica)
 OK     006-sql-injection-numeric-context/ (vulnerable=0 parche=1 ingenuo=0 roto=3 control=n/a falsador=fuera-de-alcance+medido)
 OK     007-cors-origin-reflection/ (vulnerable=0 parche=1 ingenuo=0 roto=3 control=n/a falsador=fuera-de-alcance+medido)
 OK     008-insecure-design-coupon-ledger/ (vulnerable=0 parche=1 ingenuo=0 roto=3 control=3 falsador=fuera-de-alcance+medido)
-OK     009-truncated-hash-salt/ (vulnerable=0 parche=1 ingenuo=0 roto=3 control=3 falsador=cuelga)
+OK     009-truncated-hash-salt/ (vulnerable=0 parche=1 ingenuo=0 roto=3 control=3 falsador=cuelga+medido)
 OK     010-serialization-validation-asymmetry/ (vulnerable=0 parche=1 ingenuo=0 roto=3 control=3 falsador=verifica)
 OK     011-logging-fail-open/ (vulnerable=0 parche=1 ingenuo=0 roto=3 control=3 falsador=verifica)
 OK     013-session-survives-credential-change/ (vulnerable=0 parche=1 ingenuo=0 roto=3 control=3 falsador=verifica)
 
 12/12 capsulas: ataque RC 0, parche RC 1, parche ingenuo RC 0, sujeto roto RC 3
-4/12 capsulas declaran 'falsador: verifica' y su PoC no se cree un rechazo declarado;
-el resto publica su censo en el README (fuera-de-alcance · no-medido · cuelga · roto).
+4/12 capsulas declaran 'falsador: verifica' y su PoC no se cree un rechazo declarado.
 5/12 declaran 'falsador: fuera-de-alcance' y su PoC se midio en jaula: 0 con residuo.
 cero residuo = la frontera se comprobo en esta corrida; no es una promesa del README.
+12/12 etiquetas de 'falsador:' se midieron en esta corrida: fuera-de-alcance en jaula,
+verifica contra el parche mentiroso, no-medido por 'rechazos fingidos=0', roto por RC 3 y
+cuelga por no terminar en 5s. Una etiqueta sin lector no se publica.
 7/12 declaran 'invariante: estado' (el falsificador tiene libro que mirar) y
 5/12 'invariante: retorno' (el efecto es el valor de retorno): pareja cotejada con 'falsador:' en esta corrida.
+dos tipos de oraculo tienen lector; un tercero --tiempo, concurrencia-- se nombra TIPO y no entra
 OK     tabla del README: 12 filas, 12 directorios
 ```
 
@@ -197,13 +210,13 @@ Un `0` de intentos no es un cero de hallazgos. Ninguna cápsula se publica como 
 publica el estado que la corrida permite afirmar. Cada README declara dos líneas —qué mira su
 PoC y qué dio el censo— y `./verificar-capsulas.sh` las lee:
 
-| estado | qué mide | cápsulas |
-|---|---|---|
-| `verifica` | el PoC mira el libro después del rechazo y ve el efecto igual | 005 · 010 · 011 · 013 |
-| `fuera-de-alcance` | el efecto **es** el valor de retorno que el falsificador descarta al lanzar: no hay estado que mirar, ni sano ni engañado | 001 · 002 · 006 · 007 · 008 |
-| `no-medido` | el testigo no declaró ningún rechazo que falsificar (0 fingidos) | 003 |
-| `roto` | el falsificador altera el sujeto hasta romperlo (RC 3) | 004 |
-| `cuelga` | el falsificador no termina sobre ese sujeto | 009 |
+| estado | qué afirma | cápsulas | cómo lo mide el gate |
+|---|---|---|---|
+| `verifica` | el PoC mira el libro después del rechazo y ve el efecto igual | 005 · 010 · 011 · 013 | `RC 0` contra `parche_mentiroso.py` |
+| `fuera-de-alcance` | el efecto **es** el valor de retorno que el falsificador descarta al lanzar: no hay estado que mirar, ni sano ni engañado | 001 · 002 · 006 · 007 · 008 | el PoC corre en jaula y su árbol no cambia |
+| `no-medido` | el testigo no declaró ningún rechazo que falsificar (0 fingidos) | 003 | `rechazos fingidos=0` en el contador del falsificador |
+| `roto` | el falsificador altera el sujeto hasta romperlo (RC 3) | 004 | `RC 3` contra `parche_mentiroso.py` |
+| `cuelga` | el falsificador no termina sobre ese sujeto | 009 | no termina en 5 s (límite declarado) |
 
 El hallazgo estructural es la columna `invariante`, y es lo que hace el catálogo auditable sin
 ejecutarlo: **si el invariante de una cápsula es de retorno, un parche que miente es
@@ -237,6 +250,22 @@ ya incluiría lo que el propio PoC acaba de escribir y el residuo sería invisib
 verde que la regla existe para cazar, cometido por la regla misma. Ese error se cometió y se
 corrigió en la misma tarde, y por eso `--self-test` tiene un segundo brazo que planta un PoC
 que escribe y exige el rojo.
+
+Y el vocabulario del censo tampoco era una promesa. `no-medido`, `roto` y `cuelga` eran tres
+valores que el verificador aceptaba con un `;;` vacío —leídos y no usados— mientras el censo los
+imprimía como datos. El 17-Nov-2026 se midieron contra el mismo falsificador que los provoca:
+`003` publica `rechazos fingidos=0` con ocho `[FALSADOR NO MEDIDO]`, `004` da `RC 3` con diez
+rechazos fingidos, `009` no termina ni en 20 s. Las tres etiquetas **decían la verdad y ninguna se
+estaba comprobando**: es la tercera vez que aparece el mismo defecto —marca sin lector— y la más
+cara, porque una etiqueta que no se mide envejece sin que nadie lo note. `cuelga` trajo lo que
+faltaba: colgarse no deja código de salida, así que su única medida posible es un reloj. El eje
+temporal entra al instrumento como **límite declarado de 5 s**, no como reloj falso, y sólo se
+aplica a la cápsula que declara `cuelga`: la etiqueta la pone el sujeto, el gate sólo la refuta,
+de modo que un PoC legítimamente lento nunca se clasifica por inferencia. Junto al eje temporal se
+cierra el de los tipos: `invariante:` acepta `estado` y `retorno`, y cualquier otro —`tiempo`,
+`concurrencia`— se nombra `TIPO` y para la corrida. Un tipo de oráculo se abre construyendo su
+lector; escribiendo la cápsula sólo se abre una fila. Coste medido: el gate pasa de 9,7 s a 13,6 s,
+y cinco de esos segundos son el reloj esperando a `009`.
 
 `013` añade una lección que las otras tres no dieron: **el lector de estado puede estar mal elegido
 y acusar al parche que cierra.** La lectura natural de su falla —mirar la marca `revocada` en el

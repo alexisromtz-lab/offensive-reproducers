@@ -13,7 +13,17 @@
 # se mide, no se cree: el PoC corre en una jaula y su arbol de archivos se coteja antes y
 # despues. Una capsula que declara no tener libro y escribe uno es un falso verde en la
 # direccion peligrosa --lo que el usuario cree que no toca, ya lo toco--.
+#
+# La decima: todo valor que el censo publica tiene lector. `no-medido`, `roto` y `cuelga`
+# pasaban por un `;;` vacio mientras el censo los imprimia como datos. Desde el 17-Nov-2026
+# se miden contra el mismo falsificador que los provoca: un vocabulario que crece sin lector
+# es prosa con formato de dato.
 set -u
+
+# `falsador: cuelga` no deja codigo de salida, asi que su unica medida posible es un reloj.
+# Medido el 17-Nov-2026: 009 no termina ni en 20 s; el limite se queda corto y se publica.
+LIMITE_CUELGA=5
+LIMITE_FALSADOR=8
 
 # Cuenta las lineas de diferencia entre el arbol de la capsula antes y despues de correr su
 # PoC en una jaula temporal. El limite esta declarado: mide lo que queda DENTRO de la jaula;
@@ -30,6 +40,31 @@ residuo_en_jaula() {
   escrito=$(diff "$jaula/antes" "$jaula/despues" 2>/dev/null | grep -c '^[<>]')
   rm -rf "$jaula"
   echo "${escrito:-99}"
+}
+
+# Corre el PoC de una capsula contra un sujeto con limite de segundos y publica
+# "RC=<rc> FINGIDOS=<n>". El falsificador ya dice cuantos rechazos fingidos vio --con cero
+# fingidos un RC 0 no absolvio nada-- y ese numero, que hasta el 17-Nov-2026 se tiraba a
+# /dev/null, es lo que decide si su veredicto significa algo. RC 124 si no termina.
+con_limite() {
+  cap=$1
+  sujeto=$2
+  limite=$3
+  python3 - "$cap" "$sujeto" "$limite" <<'PY'
+import subprocess, sys
+cap, sujeto, limite = sys.argv[1], sys.argv[2], float(sys.argv[3])
+try:
+    r = subprocess.run(["python3", "exploit_poc.py", "--app", sujeto], cwd=cap,
+                       capture_output=True, text=True, errors="replace", timeout=limite)
+except subprocess.TimeoutExpired:
+    print("RC=124 FINGIDOS=0")
+    raise SystemExit(0)
+fingidos = 0
+for linea in (r.stdout or "").splitlines():
+    if "rechazos fingidos=" in linea:
+        fingidos = int(linea.split("rechazos fingidos=")[1].split()[0])
+print("RC=%d FINGIDOS=%d" % (r.returncode, fingidos))
+PY
 }
 
 # Sin esta prueba el cotejo seria otra marca sin lector: nadie sabria si sigue mirando. Se
@@ -121,6 +156,81 @@ POC
     return 1
   fi
   echo "OK     --self-test: PoC que escribe con 'falsador: fuera-de-alcance' -> RC $rc_residuo nombrando FRONTERA; el mismo PoC sin escribir -> RC 0"
+
+  # Tercer brazo, el vocabulario: una etiqueta del censo que no se mide es prosa con formato
+  # de dato. Se plantan las tres mentiras --mas una verdad del mismo tipo-- y se exige que
+  # cada mentira salga roja nombrando su etiqueta y que la verdad no sea acusada.
+  jaula=$(mktemp -d "${TMPDIR:-/tmp}/etiquetas.XXXXXX") || return 1
+  cp "$origen/verificar-capsulas.sh" "$origen/sujeto_roto.py" "$origen/parche_mentiroso.py" "$jaula/" || return 1
+  : >"$jaula/README.md"
+  # nombre : etiqueta : RC del PoC contra el parche mentiroso : fingidos que publica
+  for fila in 996-x:roto:3:1 997-x:no-medido:0:3 998-x:roto:0:1 999-x:cuelga:0:1; do
+    dir=${fila%%:*}
+    resto=${fila#*:}
+    etiqueta=${resto%%:*}
+    resto=${resto#*:}
+    rc_mentiroso=${resto%%:*}
+    fingidos=${resto##*:}
+    mkdir "$jaula/$dir" || return 1
+    printf '| %s | prueba | A00:2021 |\n' "${dir%%-*}" >>"$jaula/README.md"
+    printf 'invariante: estado\nfalsador: %s\n' "$etiqueta" >"$jaula/$dir/README.md"
+    : >"$jaula/$dir/patch_secure.py"
+    cat >"$jaula/$dir/exploit_poc.py" <<POC
+import sys
+args = sys.argv[1:]
+if "--app" in args:
+    app = args[args.index("--app") + 1]
+    if "sujeto_roto" in app:
+        sys.exit(3)
+    if "mentiroso" in app:
+        print("[FALSADOR] rechazos fingidos=$fingidos []")
+        sys.exit($rc_mentiroso)
+    sys.exit(0 if "--naive" in args else 1)
+sys.exit(0)
+POC
+  done
+
+  # Y el techo del eje: un tipo de oraculo que el instrumento no sabe leer --tiempo,
+  # concurrencia-- no puede entrar por accidente. Si no tiene lector, se nombra TIPO y se
+  # para; el hueco declarado es el que despues se convierte en acto.
+  mkdir "$jaula/995-x" || return 1
+  printf '| 995 | prueba | A00:2021 |\n' >>"$jaula/README.md"
+  printf 'invariante: tiempo\nfalsador: verifica\n' >"$jaula/995-x/README.md"
+  : >"$jaula/995-x/patch_secure.py"
+  cat >"$jaula/995-x/exploit_poc.py" <<'POC'
+import sys
+args = sys.argv[1:]
+if "--app" in args:
+    app = args[args.index("--app") + 1]
+    if "sujeto_roto" in app:
+        sys.exit(3)
+    sys.exit(0 if "--naive" in args or "mentiroso" in app else 1)
+sys.exit(0)
+POC
+
+  salida=$(cd "$jaula" && sh ./verificar-capsulas.sh 2>&1)
+  rc_etiquetas=$?
+  n_nomedido=$(printf '%s\n' "$salida" | grep -c 'NO-MEDIDO')
+  n_roto=$(printf '%s\n' "$salida" | grep -c 'ROTO:')
+  n_cuelga=$(printf '%s\n' "$salida" | grep -c 'CUELGA:')
+  n_tipo=$(printf '%s\n' "$salida" | grep -c 'TIPO:')
+  acusada=$(printf '%s\n' "$salida" | grep -c 'FALLA  996-x/')
+
+  printf '| 996 | prueba | A00:2021 |\n' >"$jaula/README.md"
+  rm -rf "$jaula/995-x" "$jaula/997-x" "$jaula/998-x" "$jaula/999-x"
+  (cd "$jaula" && sh ./verificar-capsulas.sh >/dev/null 2>&1)
+  rc_verdad=$?
+  rm -rf "$jaula"
+
+  if [ "$rc_etiquetas" -eq 0 ] || [ "$n_nomedido" -eq 0 ] || [ "$n_roto" -eq 0 ] || [ "$n_cuelga" -eq 0 ] || [ "$n_tipo" -eq 0 ]; then
+    echo "FALLA  --self-test: una etiqueta del censo paso sin lector (RC $rc_etiquetas; NO-MEDIDO $n_nomedido, ROTO $n_roto, CUELGA $n_cuelga, TIPO $n_tipo)"
+    return 1
+  fi
+  if [ "$acusada" -ne 0 ] || [ "$rc_verdad" -ne 0 ]; then
+    echo "FALLA  --self-test: el 'roto' que dice la verdad fue acusado (RC $rc_verdad, $acusada linea(s))"
+    return 1
+  fi
+  echo "OK     --self-test: 'no-medido' con fingidos>0, 'roto' con RC 0, 'cuelga' que termina e 'invariante: tiempo' -> RC $rc_etiquetas nombrando NO-MEDIDO, ROTO, CUELGA y TIPO; el 'roto' verdadero -> RC 0"
   return 0
 }
 
@@ -134,6 +244,7 @@ fallos=0
 total=0
 fronteras=0
 con_residuo=0
+medidas=0
 
 for capsula in [0-9][0-9][0-9]-*/; do
   [ -d "$capsula" ] || continue
@@ -184,16 +295,16 @@ for capsula in [0-9][0-9][0-9]-*/; do
   # Quinto modo, declarado por capsula: si el README dice `falsador: verifica`, el PoC
   # afirma que no se cree un rechazo declarado --que mira el libro despues de la
   # excepcion-- y aqui tiene su lector. Un RC 0 significa que detecto el efecto pese al
-  # rechazo; un RC 1 significa que se lo creyo. Los otros valores son el censo publicado
-  # (fuera-de-alcance, no-medido, cuelga, roto) y no se ejecutan: 009 no termina y 004
-  # rompe el sujeto. Sin lector esa afirmacion seria prosa y nadie la refutaria.
+  # rechazo; un RC 1 significa que se lo creyo. Los otros cuatro valores del censo tienen
+  # lector propio desde el 17-Nov-2026: hasta entonces pasaban por un `;;` vacio y el censo
+  # los imprimia como datos.
   # (las declaraciones ya se leyeron sobre el estado pristino, con la frontera medida)
   censo_ok=si
   pareja_conocida=si
   censo="$falsador_declarado"
   case "$invariante" in
     estado|retorno) ;;
-    *) echo "FALLA  $capsula sin declarar 'invariante: estado|retorno'"; censo_ok=no; pareja_conocida=no ;;
+    *) echo "FALLA  $capsula TIPO: 'invariante: $invariante' no tiene lector; los tipos que lo tienen son estado y retorno"; censo_ok=no; pareja_conocida=no ;;
   esac
   case "$falsador_declarado" in
     verifica)
@@ -206,6 +317,8 @@ for capsula in [0-9][0-9][0-9]-*/; do
           echo "FALLA  $capsula falsador: RC $rc_falsador, el PoC se cree el rechazo declarado"
         fi
         censo_ok=no
+      else
+        medidas=$((medidas + 1))
       fi
       ;;
     fuera-de-alcance)
@@ -217,9 +330,49 @@ for capsula in [0-9][0-9][0-9]-*/; do
         con_residuo=$((con_residuo + 1))
       else
         censo="fuera-de-alcance+medido"
+        medidas=$((medidas + 1))
       fi
       ;;
-    no-medido|cuelga|roto) ;;
+    no-medido)
+      # La etiqueta afirma que el testigo no declaro ningun rechazo que falsificar. Eso lo
+      # dice el propio falsificador en su contador: cero fingidos es la unica forma de que
+      # su RC 0 no signifique «se creyo la mentira».
+      medida=$(con_limite "$capsula" ../parche_mentiroso.py "$LIMITE_FALSADOR")
+      rc_medido=$(printf '%s' "$medida" | sed -n 's/^RC=\([0-9]*\).*/\1/p')
+      fingidos=$(printf '%s' "$medida" | sed -n 's/.*FINGIDOS=\([0-9]*\).*/\1/p')
+      if [ "$rc_medido" = 0 ] && [ "$fingidos" = 0 ]; then
+        censo="no-medido+medido"
+        medidas=$((medidas + 1))
+      else
+        echo "FALLA  $capsula NO-MEDIDO: declara cero rechazos fingidos y el falsificador conto ${fingidos:-?} con RC ${rc_medido:-?}"
+        censo_ok=no
+      fi
+      ;;
+    roto)
+      # La etiqueta afirma que el falsificador rompe el sujeto: eso es un RC 3 o no es nada.
+      medida=$(con_limite "$capsula" ../parche_mentiroso.py "$LIMITE_FALSADOR")
+      rc_medido=$(printf '%s' "$medida" | sed -n 's/^RC=\([0-9]*\).*/\1/p')
+      if [ "$rc_medido" = 3 ]; then
+        censo="roto+medido"
+        medidas=$((medidas + 1))
+      else
+        echo "FALLA  $capsula ROTO: declara que el falsificador rompe el sujeto y dio RC ${rc_medido:-?}"
+        censo_ok=no
+      fi
+      ;;
+    cuelga)
+      # Colgarse no deja codigo de salida: la unica medida es el reloj. Se declara el limite
+      # porque «cuelga» sin numero es una promesa que no se puede refutar.
+      medida=$(con_limite "$capsula" ../parche_mentiroso.py "$LIMITE_CUELGA")
+      rc_medido=$(printf '%s' "$medida" | sed -n 's/^RC=\([0-9]*\).*/\1/p')
+      if [ "$rc_medido" = 124 ]; then
+        censo="cuelga+medido"
+        medidas=$((medidas + 1))
+      else
+        echo "FALLA  $capsula CUELGA: declara no terminar en ${LIMITE_CUELGA}s y termino con RC ${rc_medido:-?}"
+        censo_ok=no
+      fi
+      ;;
     *) echo "FALLA  $capsula falsador: valor no reconocido '$falsador_declarado'"; censo_ok=no; pareja_conocida=no ;;
   esac
 
@@ -255,10 +408,12 @@ fi
 echo ""
 echo "$((total - fallos))/$total capsulas: ataque RC 0, parche RC 1, parche ingenuo RC 0, sujeto roto RC 3"
 verifican=$(grep -l '^falsador: verifica' [0-9][0-9][0-9]-*/README.md 2>/dev/null | wc -l | tr -d ' ')
-echo "$verifican/$total capsulas declaran 'falsador: verifica' y su PoC no se cree un rechazo declarado;"
-echo "el resto publica su censo en el README (fuera-de-alcance · no-medido · cuelga · roto)."
+echo "$verifican/$total capsulas declaran 'falsador: verifica' y su PoC no se cree un rechazo declarado."
 echo "$fronteras/$total declaran 'falsador: fuera-de-alcance' y su PoC se midio en jaula: $con_residuo con residuo."
 echo "cero residuo = la frontera se comprobo en esta corrida; no es una promesa del README."
+echo "$medidas/$total etiquetas de 'falsador:' se midieron en esta corrida: fuera-de-alcance en jaula,"
+echo "verifica contra el parche mentiroso, no-medido por 'rechazos fingidos=0', roto por RC 3 y"
+echo "cuelga por no terminar en ${LIMITE_CUELGA}s. Una etiqueta sin lector no se publica."
 
 # La columna `invariante` decide, no decora: se cuenta cuantas capsulas tienen libro que
 # mirar despues del rechazo y cuantas declaran que el efecto es el valor de retorno. El
@@ -268,6 +423,7 @@ con_estado=$(grep -l '^invariante: estado' [0-9][0-9][0-9]-*/README.md 2>/dev/nu
 con_retorno=$(grep -l '^invariante: retorno' [0-9][0-9][0-9]-*/README.md 2>/dev/null | wc -l | tr -d ' ')
 echo "$con_estado/$total declaran 'invariante: estado' (el falsificador tiene libro que mirar) y"
 echo "$con_retorno/$total 'invariante: retorno' (el efecto es el valor de retorno): pareja cotejada con 'falsador:' en esta corrida."
+echo "dos tipos de oraculo tienen lector; un tercero --tiempo, concurrencia-- se nombra TIPO y no entra"
 
 # La tabla del README y los directorios divergen en silencio: una capsula nueva sin
 # fila deja el anuncio corto, y una fila sin directorio promete lo que no existe.

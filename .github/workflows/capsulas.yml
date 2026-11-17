@@ -20,10 +20,10 @@ jobs:
       - name: version de python
         run: python3 --version
 
-      # El self-test tambien necesita lector: falsa la pareja y la frontera. Si alguien borra
-      # un cotejo, este paso se pone rojo antes de que el gate grande siga dando verde sobre
-      # las declaraciones.
-      - name: la pareja y la frontera se falsan a si mismas
+      # El self-test tambien necesita lector: falsa la pareja, la frontera y el vocabulario. Si
+      # alguien borra un cotejo, este paso se pone rojo antes de que el gate grande siga dando
+      # verde sobre las declaraciones.
+      - name: la pareja, la frontera y el vocabulario se falsan a si mismas
         run: ./verificar-capsulas.sh --self-test
 
       - name: cada capsula explota en el vulnerable y se cierra en el parche
