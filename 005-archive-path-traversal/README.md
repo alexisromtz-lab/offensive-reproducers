@@ -1,5 +1,8 @@
 # 005 · escritura fuera del destino con el nombre del miembro (tar-slip)
 
+invariante: estado
+falsador: verifica
+
 **Hipótesis.** Un extractor de archivos decide dónde escribe cada cosa **usando el nombre que el
 archivo trae dentro**. Si nadie compara ese nombre con el destino, el archivo elige el destino.
 Y esa decisión se toma en un solo punto —`os.path.join(destino, nombre)`— que casi nunca se mira.

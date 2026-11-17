@@ -1,5 +1,8 @@
 # 010 · La validación acepta lo que su propia serialización no devuelve
 
+invariante: estado
+falsador: verifica
+
 Un servicio valida el monto de un cobro y lo guarda como instantánea JSON. El monto pasa la
 validación, la escritura lo guarda como otra cosa, y la decisión de negocio se toma leyendo lo
 guardado. El cliente no rompe ninguna regla: manda un número.

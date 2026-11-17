@@ -1,5 +1,8 @@
 # 001 · Confusión de algoritmo en JWT (RS256 → HS256)
 
+invariante: retorno
+falsador: fuera-de-alcance
+
 Un servicio que valida tokens firma y verifica con RSA. Aun así acepta un token firmado
 con HMAC **usando su propia clave pública como secreto**. La clave pública se publica:
 por eso el fallo no necesita ninguna clave privada ni ninguna filtración.

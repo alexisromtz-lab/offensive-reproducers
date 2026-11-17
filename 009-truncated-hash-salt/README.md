@@ -1,5 +1,8 @@
 # 009 · Digest truncado a cuatro hex, con sal y todo
 
+invariante: estado
+falsador: cuelga
+
 Un servicio guarda credenciales. El informe dice «las claves se guardan sin sal, así que una
 tabla precompartida las abre todas». El arreglo añade sal por cuenta, la sal funciona, el
 informe se cierra — y el servicio sigue cayendo igual.

@@ -1,5 +1,8 @@
 # 007 · CORS que refleja el origen del atacante
 
+invariante: retorno
+falsador: fuera-de-alcance
+
 Una API que autentica por cookie devuelve las cabeceras CORS del origen que le llega. El
 navegador obedece: `Access-Control-Allow-Origin: <origen del atacante>` junto a
 `Access-Control-Allow-Credentials: true` significa que el sitio del atacante **lee la

@@ -1,5 +1,8 @@
 # 002 · SSRF en el renderizador de URLs
 
+invariante: retorno
+falsador: fuera-de-alcance
+
 Un servicio genera previsualizaciones: recibe una URL y la pide. No comprueba el destino,
 así que también pide las direcciones que sólo el servidor puede alcanzar. En esta cápsula
 el «interior» es un servicio efímero en loopback; en un despliegue real es el endpoint de

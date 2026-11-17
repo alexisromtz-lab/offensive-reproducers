@@ -1,5 +1,8 @@
 # 003 · Deserialización insegura con ejecución de código
 
+invariante: estado
+falsador: no-medido
+
 Un servicio guarda la sesión en el cliente: recibe el estado ya serializado y lo restaura
 al volver. No comprueba quién lo escribió ni que el formato sea el suyo. El cliente no
 envía datos — envía instrucciones, y `pickle` obedece.
