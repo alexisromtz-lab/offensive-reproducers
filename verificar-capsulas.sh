@@ -14,6 +14,13 @@
 # despues. Una capsula que declara no tener libro y escribe uno es un falso verde en la
 # direccion peligrosa --lo que el usuario cree que no toca, ya lo toco--.
 #
+# La novena, corregida el 17-Nov-2026: su foto no alcanzaba donde el sujeto escribe por
+# defecto. Medido en una jaula de sonda, un PoC que escapaba por `tempfile` y por `~` daba
+# `0 con residuo` y la capsula salia `OK`: el gate publicaba salud sobre un cero de alcance.
+# Ahora HOME, TMPDIR y los XDG se apuntan a subdirectorios de la propia jaula y la foto se
+# toma sobre toda ella, asi que lo redirigible pasa a ser residuo medido. Ruta absoluta
+# literal (`/tmp/x`, `/var`) y red siguen fuera: se declaran en el censo y no se cuentan cero.
+#
 # La decima: todo valor que el censo publica tiene lector. `no-medido`, `roto` y `cuelga`
 # pasaban por un `;;` vacio mientras el censo los imprimia como datos. Desde el 17-Nov-2026
 # se miden contra el mismo falsificador que los provoca: un vocabulario que crece sin lector
@@ -37,20 +44,30 @@ LIMITE_FALSADOR=8
 # enero de 2103, y cualquier fixture con fecha humana ya caduco. Se publica en el censo.
 RELOJ_FUERA=4200000000
 
-# Cuenta las lineas de diferencia entre el arbol de la capsula antes y despues de correr su
-# PoC en una jaula temporal. El limite esta declarado: mide lo que queda DENTRO de la jaula;
-# un PoC que escriba con ruta absoluta fuera de ella no se ve aqui, y por eso la jaula se
-# monta con la capsula como subdirectorio --`../x` sigue cayendo dentro--.
+# Cuenta las lineas de diferencia entre el arbol de la jaula antes y despues de correr su PoC.
+# La foto se toma sobre la jaula entera --no solo sobre el subdirectorio de la capsula-- y las
+# rutas por defecto del sujeto (HOME, TMPDIR, TMP, TEMP y los XDG) se apuntan a subdirectorios
+# de la jaula: lo que el PoC escriba por `tempfile` o por `~` cae dentro de la foto. El limite
+# que sigue declarado: una ruta absoluta literal (`/tmp/x`, `/var`, `/etc`) o una escritura por
+# red no se ven aqui, y el censo lo publica como frontera, no como cero.
 residuo_en_jaula() {
   cap=$1
   jaula=$(mktemp -d "${TMPDIR:-/tmp}/frontera.XXXXXX") || { echo 99; return 0; }
-  cp -R "${cap%/}" "$jaula/" || { rm -rf "$jaula"; echo 99; return 0; }
+  # El libro del antes/despues vive FUERA de la jaula: dentro, la propia foto se veria a si
+  # misma y toda capsula tendria residuo.
+  libro=$(mktemp -d "${TMPDIR:-/tmp}/frontera-libro.XXXXXX") || { rm -rf "$jaula"; echo 99; return 0; }
+  cp -R "${cap%/}" "$jaula/" || { rm -rf "$jaula" "$libro"; echo 99; return 0; }
+  mkdir -p "$jaula/home" "$jaula/tmp" || { rm -rf "$jaula" "$libro"; echo 99; return 0; }
   sub="$jaula/${cap%/}"
-  (cd "$sub" && find . -type f ! -name '*.pyc' ! -path '*/__pycache__/*' | LC_ALL=C sort | xargs cksum) >"$jaula/antes" 2>/dev/null
-  (cd "$sub" && python3 exploit_poc.py >/dev/null 2>&1)
-  (cd "$sub" && find . -type f ! -name '*.pyc' ! -path '*/__pycache__/*' | LC_ALL=C sort | xargs cksum) >"$jaula/despues" 2>/dev/null
-  escrito=$(diff "$jaula/antes" "$jaula/despues" 2>/dev/null | grep -c '^[<>]')
-  rm -rf "$jaula"
+  (cd "$jaula" && find . -type f ! -name '*.pyc' ! -path '*/__pycache__/*' | LC_ALL=C sort | xargs cksum) >"$libro/antes" 2>/dev/null
+  (cd "$sub" && env HOME="$jaula/home" TMPDIR="$jaula/tmp" TMP="$jaula/tmp" TEMP="$jaula/tmp" \
+    XDG_CACHE_HOME="$jaula/home/.cache" XDG_CONFIG_HOME="$jaula/home/.config" \
+    XDG_DATA_HOME="$jaula/home/.local/share" XDG_STATE_HOME="$jaula/home/.local/state" \
+    XDG_RUNTIME_DIR="$jaula/tmp/run" \
+    python3 exploit_poc.py >/dev/null 2>&1)
+  (cd "$jaula" && find . -type f ! -name '*.pyc' ! -path '*/__pycache__/*' | LC_ALL=C sort | xargs cksum) >"$libro/despues" 2>/dev/null
+  escrito=$(diff "$libro/antes" "$libro/despues" 2>/dev/null | grep -c '^[<>]')
+  rm -rf "$jaula" "$libro"
   echo "${escrito:-99}"
 }
 
@@ -321,6 +338,59 @@ POC
     return 1
   fi
   echo "OK     --self-test: 'reloj: AHORA' ignorado -> RC $rc_reloj nombrando RELOJ; el mismo campo con un veredicto que cambia -> RC 0"
+
+  # Quinto brazo, el alcance de la foto: la novena regla medía el residuo solo donde miraba, y
+  # un PoC que escribia por `tempfile` o por `~` publicaba `0 con residuo` con la capsula en
+  # verde --medido el 17-Nov-2026 en una jaula de sonda--. Se planta una capsula que escapa por
+  # las dos rutas por defecto y se exige el rojo; despues la misma sin escribir, y se exige
+  # verde. Sin el control negativo el brazo seria un siempre-rojo y no mediria nada.
+  jaula=$(mktemp -d "${TMPDIR:-/tmp}/alcance.XXXXXX") || return 1
+  cp "$origen/verificar-capsulas.sh" "$origen/sujeto_roto.py" "$origen/parche_mentiroso.py" "$origen/inyector_reloj.py" "$jaula/" || return 1
+  printf '| 992 | prueba | A00:2021 |\n' >"$jaula/README.md" || return 1
+  mkdir "$jaula/992-x" || return 1
+  printf 'invariante: retorno\nfalsador: fuera-de-alcance\n' >"$jaula/992-x/README.md" || return 1
+  : >"$jaula/992-x/patch_secure.py"
+  cat >"$jaula/992-x/exploit_poc.py" <<'POC'
+import os, pathlib, sys, tempfile
+args = sys.argv[1:]
+if "--app" in args:
+    app = args[args.index("--app") + 1]
+    if "sujeto_roto" in app:
+        sys.exit(3)
+    sys.exit(0 if "--naive" in args else 1)
+with tempfile.NamedTemporaryFile("w", prefix="escapa-", suffix=".txt", delete=False) as f:
+    f.write("x")
+pathlib.Path(os.path.expanduser("~/.escapa")).write_text("x")
+sys.exit(0)
+POC
+
+  salida=$(cd "$jaula" && sh ./verificar-capsulas.sh 2>&1)
+  rc_alcance=$?
+  n_frontera=$(printf '%s\n' "$salida" | grep -c 'FRONTERA')
+
+  cat >"$jaula/992-x/exploit_poc.py" <<'POC'
+import sys
+args = sys.argv[1:]
+if "--app" in args:
+    app = args[args.index("--app") + 1]
+    if "sujeto_roto" in app:
+        sys.exit(3)
+    sys.exit(0 if "--naive" in args else 1)
+sys.exit(0)
+POC
+  (cd "$jaula" && sh ./verificar-capsulas.sh >/dev/null 2>&1)
+  rc_callado=$?
+  rm -rf "$jaula"
+
+  if [ "$rc_alcance" -eq 0 ] || [ "$n_frontera" -eq 0 ]; then
+    echo "FALLA  --self-test: el PoC que escapa por HOME/TMPDIR no se cazo (RC $rc_alcance, 'FRONTERA' nombrada $n_frontera veces)"
+    return 1
+  fi
+  if [ "$rc_callado" -ne 0 ]; then
+    echo "FALLA  --self-test: la capsula que no escribe fuera de su arbol fue acusada (RC $rc_callado)"
+    return 1
+  fi
+  echo "OK     --self-test: PoC que escapa por 'tempfile' y '~' -> RC $rc_alcance nombrando FRONTERA; el mismo PoC sin escapar -> RC 0"
   return 0
 }
 
@@ -418,7 +488,7 @@ for capsula in [0-9][0-9][0-9]-*/; do
       # Coste medido el 17-Nov-2026: +2,1 s sobre 18,9 s de gate.
       fronteras=$((fronteras + 1))
       if [ "$escrito" -ne 0 ]; then
-        echo "FALLA  $capsula FRONTERA: declara que no hay libro que mirar y su PoC escribio en la jaula ($escrito linea(s) de diferencia)"
+        echo "FALLA  $capsula FRONTERA: declara que no hay libro que mirar y su PoC escribio dentro de la jaula ($escrito linea(s) de diferencia en su arbol, HOME, TMPDIR o XDG)"
         censo_ok=no
         con_residuo=$((con_residuo + 1))
       else
@@ -537,7 +607,7 @@ echo "$((total - fallos))/$total capsulas: ataque RC 0, parche RC 1, parche inge
 verifican=$(grep -l '^falsador: verifica' [0-9][0-9][0-9]-*/README.md 2>/dev/null | wc -l | tr -d ' ')
 echo "$verifican/$total capsulas declaran 'falsador: verifica' y su PoC no se cree un rechazo declarado."
 echo "$fronteras/$total declaran 'falsador: fuera-de-alcance' y su PoC se midio en jaula: $con_residuo con residuo."
-echo "cero residuo = la frontera se comprobo en esta corrida; no es una promesa del README."
+echo "cero residuo = no escribio ni en su arbol ni por HOME/TMPDIR/XDG; ruta absoluta y red, fuera."
 echo "$medidas/$total etiquetas de 'falsador:' se midieron en esta corrida: fuera-de-alcance en jaula,"
 echo "verifica contra el parche mentiroso, no-medido por 'rechazos fingidos=0', roto por RC 3 y"
 echo "cuelga por no terminar en ${LIMITE_CUELGA}s. Una etiqueta sin lector no se publica."
