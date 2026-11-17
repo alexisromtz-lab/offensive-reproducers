@@ -18,12 +18,24 @@
 # pasaban por un `;;` vacio mientras el censo los imprimia como datos. Desde el 17-Nov-2026
 # se miden contra el mismo falsificador que los provoca: un vocabulario que crece sin lector
 # es prosa con formato de dato.
+#
+# La undecima: el tiempo no es un tercer tipo de oraculo, es una dimension del sujeto. El
+# tipo sigue siendo dos --que mira el juicio, estado o retorno--; el instante dice CUANDO se
+# hace la pregunta. Una capsula que declara `reloj: AHORA` afirma que su sujeto pregunta la
+# hora, y aqui se mueve el instante por donde el sujeto ya pregunta: si el veredicto no
+# cambia, el campo decoraba. Medido el 17-Nov-2026 en la primera corrida: el fixture de 001
+# caduca.
 set -u
 
 # `falsador: cuelga` no deja codigo de salida, asi que su unica medida posible es un reloj.
 # Medido el 17-Nov-2026: 009 no termina ni en 20 s; el limite se queda corto y se publica.
 LIMITE_CUELGA=5
 LIMITE_FALSADOR=8
+
+# El instante con el que se mueve el reloj de una capsula que declara `reloj:`. Es un valor
+# declarado y no el reloj real + N anios para que la corrida sea determinista: 4200000000 es
+# enero de 2103, y cualquier fixture con fecha humana ya caduco. Se publica en el censo.
+RELOJ_FUERA=4200000000
 
 # Cuenta las lineas de diferencia entre el arbol de la capsula antes y despues de correr su
 # PoC en una jaula temporal. El limite esta declarado: mide lo que queda DENTRO de la jaula;
@@ -67,6 +79,32 @@ print("RC=%d FINGIDOS=%d" % (r.returncode, fingidos))
 PY
 }
 
+# Corre el PoC con el instante movido y publica "RC=<rc>". El inyector viaja como
+# `sitecustomize.py` en una jaula que hace de PYTHONPATH, asi que el sujeto pregunta la hora
+# por el mismo camino que ya usaba y no se le toca una linea. Sin dormir y sin mock: se mueve
+# la respuesta, no se espera. RC 124 si no termina, 99 si la jaula no se pudo montar.
+reloj_en_jaula() {
+  cap=$1
+  instante=$2
+  limite=$3
+  origen=$(cd "$(dirname "$0")" && pwd) || { echo "RC=99"; return 0; }
+  jaula=$(mktemp -d "${TMPDIR:-/tmp}/reloj.XXXXXX") || { echo "RC=99"; return 0; }
+  cp "$origen/inyector_reloj.py" "$jaula/sitecustomize.py" || { rm -rf "$jaula"; echo "RC=99"; return 0; }
+  python3 - "$cap" "$jaula" "$instante" "$limite" <<'PY'
+import os, subprocess, sys
+cap, jaula, instante, limite = sys.argv[1], sys.argv[2], sys.argv[3], float(sys.argv[4])
+entorno = dict(os.environ, PYTHONPATH=jaula, AHORA=instante)
+try:
+    r = subprocess.run(["python3", "exploit_poc.py"], cwd=cap, env=entorno,
+                       capture_output=True, text=True, errors="replace", timeout=limite)
+except subprocess.TimeoutExpired:
+    print("RC=124")
+    raise SystemExit(0)
+print("RC=%d" % r.returncode)
+PY
+  rm -rf "$jaula"
+}
+
 # Sin esta prueba el cotejo seria otra marca sin lector: nadie sabria si sigue mirando. Se
 # copia una capsula que hoy certifica, se le cambia `invariante:` por `retorno` --dejando
 # `falsador: verifica`, que es la contradiccion-- y se exige RC distinto de 0 con la palabra
@@ -83,7 +121,7 @@ self_test() {
   fi
 
   jaula=$(mktemp -d "${TMPDIR:-/tmp}/pareja.XXXXXX") || return 1
-  cp "$origen/verificar-capsulas.sh" "$origen/sujeto_roto.py" "$origen/parche_mentiroso.py" "$jaula/" || return 1
+  cp "$origen/verificar-capsulas.sh" "$origen/sujeto_roto.py" "$origen/parche_mentiroso.py" "$origen/inyector_reloj.py" "$jaula/" || return 1
   cp -R "$origen/${capsula%/}" "$jaula/" || return 1
   printf '| %s | prueba | A00:2021 |\n' "$(printf '%s' "$capsula" | cut -c1-3)" >"$jaula/README.md" || return 1
   cp "$jaula/$capsula"README.md "$jaula/declaracion.orig" || return 1
@@ -113,7 +151,7 @@ self_test() {
   # 17-Nov-2026: las cinco capsulas con `fuera-de-alcance` dejan cero residuo, asi que la
   # frontera era una promesa sin predicado. Aqui se le pone predicado y falsador propio.
   jaula=$(mktemp -d "${TMPDIR:-/tmp}/self-frontera.XXXXXX") || return 1
-  cp "$origen/verificar-capsulas.sh" "$origen/sujeto_roto.py" "$origen/parche_mentiroso.py" "$jaula/" || return 1
+  cp "$origen/verificar-capsulas.sh" "$origen/sujeto_roto.py" "$origen/parche_mentiroso.py" "$origen/inyector_reloj.py" "$jaula/" || return 1
   mkdir "$jaula/999-frontera" || return 1
   printf '| 999 | prueba | A00:2021 |\n' >"$jaula/README.md" || return 1
   printf 'invariante: retorno\nfalsador: fuera-de-alcance\n' >"$jaula/999-frontera/README.md" || return 1
@@ -161,7 +199,7 @@ POC
   # de dato. Se plantan las tres mentiras --mas una verdad del mismo tipo-- y se exige que
   # cada mentira salga roja nombrando su etiqueta y que la verdad no sea acusada.
   jaula=$(mktemp -d "${TMPDIR:-/tmp}/etiquetas.XXXXXX") || return 1
-  cp "$origen/verificar-capsulas.sh" "$origen/sujeto_roto.py" "$origen/parche_mentiroso.py" "$jaula/" || return 1
+  cp "$origen/verificar-capsulas.sh" "$origen/sujeto_roto.py" "$origen/parche_mentiroso.py" "$origen/inyector_reloj.py" "$jaula/" || return 1
   : >"$jaula/README.md"
   # nombre : etiqueta : RC del PoC contra el parche mentiroso : fingidos que publica
   for fila in 996-x:roto:3:1 997-x:no-medido:0:3 998-x:roto:0:1 999-x:cuelga:0:1; do
@@ -231,6 +269,58 @@ POC
     return 1
   fi
   echo "OK     --self-test: 'no-medido' con fingidos>0, 'roto' con RC 0, 'cuelga' que termina e 'invariante: tiempo' -> RC $rc_etiquetas nombrando NO-MEDIDO, ROTO, CUELGA y TIPO; el 'roto' verdadero -> RC 0"
+
+  # Cuarto brazo, la dimension temporal: `reloj:` afirma que el sujeto pregunta la hora. Se
+  # plantan dos capsulas --una que cambia de veredicto cuando el instante se mueve y otra que
+  # lo ignora-- y se exige roja la segunda nombrando RELOJ y verde la primera. Sin este brazo
+  # el campo seria otra marca sin lector: la undecima promesa sin falsador propio.
+  jaula=$(mktemp -d "${TMPDIR:-/tmp}/reloj-self.XXXXXX") || return 1
+  cp "$origen/verificar-capsulas.sh" "$origen/sujeto_roto.py" "$origen/parche_mentiroso.py" "$origen/inyector_reloj.py" "$jaula/" || return 1
+  : >"$jaula/README.md"
+  for fila in 993-x:sordo 994-x:sensible; do
+    dir=${fila%%:*}
+    clase=${fila##*:}
+    mkdir "$jaula/$dir" || return 1
+    printf '| %s | prueba | A00:2021 |\n' "${dir%%-*}" >>"$jaula/README.md"
+    printf 'invariante: retorno\nfalsador: fuera-de-alcance\nreloj: AHORA\n' >"$jaula/$dir/README.md"
+    : >"$jaula/$dir/patch_secure.py"
+    if [ "$clase" = sensible ]; then
+      desenlace='sys.exit(1 if os.environ.get("AHORA") else 0)'
+    else
+      desenlace='sys.exit(0)'
+    fi
+    cat >"$jaula/$dir/exploit_poc.py" <<POC
+import os, sys
+args = sys.argv[1:]
+if "--app" in args:
+    app = args[args.index("--app") + 1]
+    if "sujeto_roto" in app:
+        sys.exit(3)
+    sys.exit(0 if "--naive" in args else 1)
+$desenlace
+POC
+  done
+
+  salida=$(cd "$jaula" && sh ./verificar-capsulas.sh 2>&1)
+  rc_reloj=$?
+  n_reloj=$(printf '%s\n' "$salida" | grep -c 'RELOJ')
+  acusada=$(printf '%s\n' "$salida" | grep -c 'FALLA  994-x/')
+
+  printf '| 994 | prueba | A00:2021 |\n' >"$jaula/README.md"
+  rm -rf "$jaula/993-x"
+  (cd "$jaula" && sh ./verificar-capsulas.sh >/dev/null 2>&1)
+  rc_sensible=$?
+  rm -rf "$jaula"
+
+  if [ "$rc_reloj" -eq 0 ] || [ "$n_reloj" -eq 0 ]; then
+    echo "FALLA  --self-test: el 'reloj:' que no mueve su veredicto no se cazo (RC $rc_reloj, 'RELOJ' nombrada $n_reloj veces)"
+    return 1
+  fi
+  if [ "$acusada" -ne 0 ] || [ "$rc_sensible" -ne 0 ]; then
+    echo "FALLA  --self-test: la capsula cuyo veredicto si cambia con el instante fue acusada (RC $rc_sensible, $acusada linea(s))"
+    return 1
+  fi
+  echo "OK     --self-test: 'reloj: AHORA' ignorado -> RC $rc_reloj nombrando RELOJ; el mismo campo con un veredicto que cambia -> RC 0"
   return 0
 }
 
@@ -245,6 +335,8 @@ total=0
 fronteras=0
 con_residuo=0
 medidas=0
+relojes=0
+caducan=0
 
 for capsula in [0-9][0-9][0-9]-*/; do
   [ -d "$capsula" ] || continue
@@ -256,6 +348,7 @@ for capsula in [0-9][0-9][0-9]-*/; do
   # esta regla existe para cazar, cometido por la regla misma--.
   invariante=$(sed -n 's/^invariante: *//p' "$capsula"README.md 2>/dev/null | head -1)
   falsador_declarado=$(sed -n 's/^falsador: *//p' "$capsula"README.md 2>/dev/null | head -1)
+  reloj_declarado=$(sed -n 's/^reloj: *//p' "$capsula"README.md 2>/dev/null | head -1)
   escrito=-1
   if [ "$falsador_declarado" = fuera-de-alcance ]; then
     escrito=$(residuo_en_jaula "$capsula")
@@ -376,6 +469,40 @@ for capsula in [0-9][0-9][0-9]-*/; do
     *) echo "FALLA  $capsula falsador: valor no reconocido '$falsador_declarado'"; censo_ok=no; pareja_conocida=no ;;
   esac
 
+  # La dimension temporal, en campo aparte porque no es un tipo de oraculo: `reloj: <VAR>`
+  # afirma que el sujeto pregunta la hora. Se mueve el instante a RELOJ_FUERA con el inyector
+  # y se exige que el veredicto cambie. Si no cambia, el campo decoraba; si el sujeto se cuelga
+  # al moverlo, un juicio y un cuelgue no se distinguen y se publica como falla.
+  if [ -n "$reloj_declarado" ]; then
+    case "$reloj_declarado" in
+      *[!A-Z0-9_]*|[0-9]*)
+        echo "FALLA  $capsula RELOJ: 'reloj: $reloj_declarado' no es un nombre de variable"
+        censo_ok=no
+        ;;
+      *)
+        relojes=$((relojes + 1))
+        rc_fuera=$(reloj_en_jaula "$capsula" "$RELOJ_FUERA" "$LIMITE_FALSADOR" | sed -n 's/^RC=\([0-9]*\).*/\1/p')
+        if [ -z "$rc_fuera" ] || [ "$rc_fuera" -eq 99 ]; then
+          echo "FALLA  $capsula RELOJ: no se pudo medir el instante declarado"
+          censo_ok=no
+        elif [ "$rc_fuera" -eq 124 ]; then
+          echo "FALLA  $capsula RELOJ: con el instante en $RELOJ_FUERA el PoC no termina en ${LIMITE_FALSADOR}s; no se distingue juicio de cuelgue"
+          censo_ok=no
+        elif [ "$rc_fuera" -eq "$vulnerable" ]; then
+          echo "FALLA  $capsula RELOJ: declara 'reloj: $reloj_declarado' y su veredicto no cambia (RC $rc_fuera con el reloj real y con $RELOJ_FUERA)"
+          censo_ok=no
+        elif [ "$rc_fuera" -eq 3 ]; then
+          # El veredicto si depende del instante, pero el sujeto ya no llega a juicio: su
+          # fixture caduco. La etiqueta es verdadera y ademas hay una deuda con fecha.
+          censo="$censo+caduca"
+          caducan=$((caducan + 1))
+        else
+          censo="$censo+reloj"
+        fi
+        ;;
+    esac
+  fi
+
   # Las dos lineas no son dos etiquetas: son la misma afirmacion dicha dos veces, porque la
   # tabla del README define 'fuera-de-alcance' como «el efecto ES el valor de retorno... no
   # hay estado que mirar». Hasta el 17-Nov-2026 este script validaba el vocabulario y no la
@@ -423,7 +550,10 @@ con_estado=$(grep -l '^invariante: estado' [0-9][0-9][0-9]-*/README.md 2>/dev/nu
 con_retorno=$(grep -l '^invariante: retorno' [0-9][0-9][0-9]-*/README.md 2>/dev/null | wc -l | tr -d ' ')
 echo "$con_estado/$total declaran 'invariante: estado' (el falsificador tiene libro que mirar) y"
 echo "$con_retorno/$total 'invariante: retorno' (el efecto es el valor de retorno): pareja cotejada con 'falsador:' en esta corrida."
-echo "dos tipos de oraculo tienen lector; un tercero --tiempo, concurrencia-- se nombra TIPO y no entra"
+echo "dos tipos de oraculo tienen lector --estado y retorno--; un tercero se nombra TIPO y no entra"
+echo "$relojes/$total declaran 'reloj:' y su veredicto se movio al instante $RELOJ_FUERA; $caducan caducan ahi."
+echo "el tiempo no es un tercer tipo: es una dimension del sujeto, con lector propio desde el 17-Nov-2026."
+echo "concurrencia sigue sin lector: se nombra, no se mide."
 
 # La tabla del README y los directorios divergen en silencio: una capsula nueva sin
 # fila deja el anuncio corto, y una fila sin directorio promete lo que no existe.

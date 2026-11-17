@@ -4,7 +4,7 @@
 
 Laboratorios sintéticos de seguridad ofensiva. Cada cápsula es un fallo real,
 reconstruido desde cero en código propio, con su exploit determinista y su parche.
-Todo corre en menos de diez segundos, sin dependencias externas y sin red externa.
+Todo corre en segundos, sin dependencias externas y sin red externa: quince el gate.
 
 > **¿Tienes un servicio web o una API?** → [Trabajo sobre tu servicio](#trabajo-sobre-tu-servicio)
 
@@ -57,11 +57,12 @@ NNN-<vector>/
 └── patch_secure.py     # corrección canónica + el parche ingenuo, para refutarlo
 ```
 
-Diez reglas que se comprueban, no se prometen:
+Once reglas que se comprueban, no se prometen:
 
-1. **Determinista.** Dos corridas, el mismo resultado. Sin reloj, sin azar, sin red externa.
-   Las cápsulas que necesitan un servicio levantan uno efímero en `127.0.0.1` y lo apagan
-   al terminar: el aislamiento es parte del sujeto, no una promesa.
+1. **Determinista.** Dos corridas, el mismo resultado. Sin azar, sin red externa, y sin
+   depender del día en que se corre: si el sujeto pregunta la hora, lo declara y se mide
+   (regla 11). Las cápsulas que necesitan un servicio levantan uno efímero en `127.0.0.1` y
+   lo apagan al terminar: el aislamiento es parte del sujeto, no una promesa.
 2. **Autocontenida.** Sólo biblioteca estándar. Nada que instalar.
 3. **Falsable.** El PoC decide por código de salida, no por lo que imprime.
 4. **Dual.** La misma corrida contra el parche debe fallar de forma determinista.
@@ -99,17 +100,27 @@ Diez reglas que se comprueban, no se prometen:
    declarado, y `no-medido` exige `rechazos fingidos=0` en el contador que el propio
    falsificador ya publicaba. Los tres valores eran verdad; ninguno se estaba comprobando.
    La misma regla cierra el eje de los tipos: un `invariante:` fuera de `estado` y `retorno`
-   —`tiempo`, `concurrencia`— se nombra `TIPO` y no entra, porque un tipo de oráculo se abre
-   construyendo su lector, no escribiendo una cápsula.
+   se nombra `TIPO` y no entra, porque un tipo de oráculo se abre construyendo su lector, no
+   escribiendo una cápsula.
+11. **El tiempo no es un tipo: es una dimensión, y tiene lector.** `estado` y `retorno` dicen
+   **qué** mira el juicio; el instante dice **cuándo** se hace la pregunta, y una cápsula lo
+   declara en un campo aparte: `reloj: AHORA`. Se mide sin dormir y sin mock: `inyector_reloj.py`
+   viaja como `sitecustomize.py` en una jaula y se pone en `PYTHONPATH`, así que `time.time()`
+   responde el instante declarado por el mismo camino en el que el sujeto ya preguntaba la
+   hora. Si el veredicto **no cambia** entre el reloj real y `4200000000` —enero de 2103—, el
+   campo decoraba y se nombra `RELOJ`. El primer resultado, el 17-Nov-2026, fue una deuda con
+   fecha: el control de `001` lleva `exp: 4102444800`, el 1 de enero de 2100, y ese día la
+   cápsula publicará `ROTURA DEL SUJETO` sin que nadie haya tocado el código ni el fallo. El
+   censo lo publica como `caduca`: medido, no silencioso.
 
 ## Verificar todo
 
-Un solo comando comprueba las diez promesas en todas las cápsulas, y es el mismo que
+Un solo comando comprueba las once promesas en todas las cápsulas, y es el mismo que
 corre el CI en cada push — el badge de arriba es su resultado, no una promesa:
 
 ```bash
-./verificar-capsulas.sh             # las diez reglas sobre todas las cápsulas
-./verificar-capsulas.sh --self-test # la pareja, la frontera y el vocabulario se falsan a sí mismos
+./verificar-capsulas.sh             # las once reglas sobre todas las cápsulas
+./verificar-capsulas.sh --self-test # la pareja, la frontera, el vocabulario y el reloj se falsan a sí mismos
 ```
 
 Cada cápsula se corre cuatro veces: contra el servicio vulnerable (RC 0), contra el parche
@@ -138,7 +149,9 @@ mide la frontera en vez de creerla: si una cápsula declara `fuera-de-alcance`, 
 una jaula y el árbol de archivos se coteja antes y después; escribir algo ahí es `FRONTERA` y
 es rojo. La décima lee el resto del vocabulario, que hasta el 17-Nov-2026 pasaba por un `;;`
 vacío: `roto` exige `RC 3`, `cuelga` exige no terminar dentro del límite y `no-medido` exige
-`rechazos fingidos=0`; un valor fuera de esos cinco se nombra y se para.
+`rechazos fingidos=0`; un valor fuera de esos cinco se nombra y se para. La undécima mueve el
+reloj: si la cápsula declara `reloj: AHORA`, su PoC se corre otra vez con el instante en
+`4200000000` y el veredicto tiene que cambiar; si no cambia, el campo era decoración.
 
 Y una regla que el PoC cobra antes de que el gate la vea: **sin `--naive`, todas las vías
 tienen que coincidir.** Un veredicto que satisface a una sola esconde la regresión de la
@@ -149,7 +162,7 @@ es exactamente lo que declara: cierra el caso reportado y deja abierta la clase.
 Contra un clon en blanco, el 17-Nov-2026:
 
 ```
-OK     001-jwt-algorithm-confusion/ (vulnerable=0 parche=1 ingenuo=0 roto=3 control=n/a falsador=fuera-de-alcance+medido)
+OK     001-jwt-algorithm-confusion/ (vulnerable=0 parche=1 ingenuo=0 roto=3 control=n/a falsador=fuera-de-alcance+medido+caduca)
 OK     002-ssrf-pdf-renderer/ (vulnerable=0 parche=1 ingenuo=0 roto=3 control=n/a falsador=fuera-de-alcance+medido)
 OK     003-insecure-deserialization-rce/ (vulnerable=0 parche=1 ingenuo=0 roto=3 control=n/a falsador=no-medido+medido)
 OK     004-idor-object-authorization/ (vulnerable=0 parche=1 ingenuo=0 roto=3 control=n/a falsador=roto+medido)
@@ -171,7 +184,10 @@ verifica contra el parche mentiroso, no-medido por 'rechazos fingidos=0', roto p
 cuelga por no terminar en 5s. Una etiqueta sin lector no se publica.
 7/12 declaran 'invariante: estado' (el falsificador tiene libro que mirar) y
 5/12 'invariante: retorno' (el efecto es el valor de retorno): pareja cotejada con 'falsador:' en esta corrida.
-dos tipos de oraculo tienen lector; un tercero --tiempo, concurrencia-- se nombra TIPO y no entra
+dos tipos de oraculo tienen lector --estado y retorno--; un tercero se nombra TIPO y no entra
+1/12 declaran 'reloj:' y su veredicto se movio al instante 4200000000; 1 caducan ahi.
+el tiempo no es un tercer tipo: es una dimension del sujeto, con lector propio desde el 17-Nov-2026.
+concurrencia sigue sin lector: se nombra, no se mide.
 OK     tabla del README: 12 filas, 12 directorios
 ```
 
@@ -218,6 +234,10 @@ PoC y qué dio el censo— y `./verificar-capsulas.sh` las lee:
 | `roto` | el falsificador altera el sujeto hasta romperlo (RC 3) | 004 | `RC 3` contra `parche_mentiroso.py` |
 | `cuelga` | el falsificador no termina sobre ese sujeto | 009 | no termina en 5 s (límite declarado) |
 
+La quinta columna es la etiqueta; el gate la publica con sufijos que no son estados nuevos:
+`fuera-de-alcance+medido` dice que esa frontera **se midió** en jaula, y `+caduca` que su
+veredicto se mueve cuando se mueve el reloj ([la dimensión temporal](#la-dimensión-temporal-con-lector-propio)).
+
 El hallazgo estructural es la columna `invariante`, y es lo que hace el catálogo auditable sin
 ejecutarlo: **si el invariante de una cápsula es de retorno, un parche que miente es
 inauditable por construcción** —la mentira no deja huella— y eso no es una tarea pendiente,
@@ -261,11 +281,10 @@ cara, porque una etiqueta que no se mide envejece sin que nadie lo note. `cuelga
 faltaba: colgarse no deja código de salida, así que su única medida posible es un reloj. El eje
 temporal entra al instrumento como **límite declarado de 5 s**, no como reloj falso, y sólo se
 aplica a la cápsula que declara `cuelga`: la etiqueta la pone el sujeto, el gate sólo la refuta,
-de modo que un PoC legítimamente lento nunca se clasifica por inferencia. Junto al eje temporal se
-cierra el de los tipos: `invariante:` acepta `estado` y `retorno`, y cualquier otro —`tiempo`,
-`concurrencia`— se nombra `TIPO` y para la corrida. Un tipo de oráculo se abre construyendo su
-lector; escribiendo la cápsula sólo se abre una fila. Coste medido: el gate pasa de 9,7 s a 13,6 s,
-y cinco de esos segundos son el reloj esperando a `009`.
+de modo que un PoC legítimamente lento nunca se clasifica por inferencia. Junto a ese eje se cierra el de los tipos: `invariante:` acepta `estado` y `retorno` —**qué**
+mira el juicio— y cualquier otro se nombra `TIPO` y para la corrida. Un tipo de oráculo se abre
+construyendo su lector; escribiendo la cápsula sólo se abre una fila. Coste medido de aquel acto:
+el gate pasa de 9,7 s a 13,6 s, y cinco de esos segundos son el reloj esperando a `009`.
 
 `013` añade una lección que las otras tres no dieron: **el lector de estado puede estar mal elegido
 y acusar al parche que cierra.** La lectura natural de su falla —mirar la marca `revocada` en el
@@ -274,6 +293,52 @@ invalida por comparación de credencial. Un oráculo así produce un falso rojo,
 bloquea ninguna entrega y por eso nadie corrige. Lo que separa a los dos lectores no es el fervor
 —es haber corrido el oráculo contra el sujeto que debe absolver— y la cápsula lo publica medido en
 su propio README.
+
+### La dimensión temporal, con lector propio
+
+`estado` y `retorno` responden **qué** mira el juicio. El instante responde **cuándo** se hace la
+pregunta, y es ortogonal: cualquier cápsula lo declara en un campo aparte, sin cambiar de tipo.
+
+```yaml
+reloj: AHORA    # el PoC, el sujeto o su fixture preguntan la hora
+```
+
+El gate no duerme ni detiene el tiempo: mueve la **respuesta**. `inyector_reloj.py` viaja a la
+jaula como `sitecustomize.py`, entra por `PYTHONPATH` y pone `time.time()`, `datetime.now()` y
+`datetime.utcnow()` en el instante que la corrida declara —el mismo camino por el que el sujeto
+ya preguntaba la hora, así que no se toca una línea del sujeto—. Después corre el PoC otra vez
+con `AHORA=4200000000` —enero de 2103, valor declarado y no `ahora + N`, para que la corrida sea
+determinista— y compara veredictos:
+
+| lo que pasa al mover el reloj | lectura | qué publica el gate |
+|---|---|---|
+| el `RC` no cambia | el campo decoraba: ese sujeto no pregunta la hora | rojo, nombrando `RELOJ` |
+| cambia, y el nuevo `RC` no es `3` | el veredicto depende del instante | `+reloj` |
+| cambia a `RC 3` | **caduca**: ese día acusará al sujeto de roto sin que nadie toque nada | `+caduca` |
+| `RC 124`, el límite de 5 s | no se distingue un juicio de un cuelgue | rojo |
+| `RC 99` | la jaula no se montó: no se midió | rojo |
+
+La primera corrida encontró la deuda que nadie había fechado: el control de `001` lleva
+`exp: 4102444800` —1 de enero de 2100— en `CLAIMS_ADMIN` y en `TOKEN_LEGITIMO`, así que ese día
+la cápsula pasa de `EXPLOTADO` a `ROTURA DEL SUJETO` sin que cambie una línea de código ni deje
+de estar bien escrita. No se «arregla» alargando la fecha: se publica la fecha y el comando que
+la demuestra.
+
+```bash
+d=$(mktemp -d) && cp ../inyector_reloj.py "$d/sitecustomize.py"
+cd 001-jwt-algorithm-confusion && PYTHONPATH="$d" AHORA=4102444801 python3 exploit_poc.py  # RC 3
+```
+
+**Frontera declarada, no promesa.** El inyector mueve la respuesta del reloj, no el tiempo: un
+sujeto que lea la hora por una extensión en C, por `os.clock()` o por un servicio externo no se
+mueve, y entonces el campo es rojo por una razón legítima. Y mide que el veredicto **se mueva**,
+no que el instante elegido sea el que el negocio considera ya caducado: ese juicio es del dueño
+del sujeto. La concurrencia —el otro eje que se nombraba— sigue sin lector: se publica y no se
+mide.
+
+Coste medido del acto: el gate pasa de 13,6 s a 15,7 s —una corrida más de `001`— y
+`--self-test` de 2,4 s a 7,1 s, porque su cuarto brazo monta dos cápsulas sintéticas, una que
+responde al instante y otra sorda, y exige que la sorda no sea acusada.
 
 ## Trabajo sobre tu servicio
 

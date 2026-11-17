@@ -2,6 +2,7 @@
 
 invariante: retorno
 falsador: fuera-de-alcance
+reloj: AHORA
 
 Un servicio que valida tokens firma y verifica con RSA. Aun así acepta un token firmado
 con HMAC **usando su propia clave pública como secreto**. La clave pública se publica:
@@ -75,6 +76,24 @@ if alg not in ALGORITMOS_PERMITIDOS:
 No hay rama HMAC, así que la clave pública no puede convertirse en secreto de nadie. La
 lista blanca es lo que hace la diferencia: con `estricto=False` el parche sólo rechaza
 `alg=none`, conserva el material compartido y el PoC vuelve a entrar.
+
+## Punto ciego temporal
+
+El verificador compara `exp` con `time.time()`, así que el juicio de esta cápsula depende
+del instante en que se hace la pregunta. Se declara con `reloj: AHORA`, y el gate lo mide
+moviendo el reloj por el mismo camino que el sujeto ya usa —`inyector_reloj.py` copiado a
+`PYTHONPATH` como `sitecustomize.py`—, sin dormir y sin tocar una línea del servicio:
+
+```bash
+python3 exploit_poc.py                                   # RC 0 · EXPLOTADO (reloj real)
+d=$(mktemp -d) && cp ../inyector_reloj.py "$d/sitecustomize.py"
+PYTHONPATH="$d" AHORA=4102444801 python3 exploit_poc.py  # RC 3 · el fixture caduca
+```
+
+Medido el 17-Nov-2026: el control lleva `exp: 4102444800`, que es el **1 de enero de 2100**.
+Desde ese día esta cápsula deja de publicar `EXPLOTADO` y publica `ROTURA DEL SUJETO`, sin
+que nadie haya tocado el código ni el fallo. El censo lo publica como `caduca`: la deuda
+tiene fecha y por eso deja de ser silenciosa.
 
 ## Procedencia
 
