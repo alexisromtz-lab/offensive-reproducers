@@ -125,7 +125,8 @@ corre el CI en cada push — el badge de arriba es su resultado, no una promesa:
 
 ```bash
 ./verificar-capsulas.sh             # las once reglas sobre todas las cápsulas
-./verificar-capsulas.sh --self-test # la pareja, la frontera, su alcance, el entorno, el vocabulario, el reloj y el censo de los siete se falsan a sí mismos
+./verificar-capsulas.sh --self-test # la pareja, la frontera, su alcance, el entorno, el vocabulario, el reloj, el censo y la conducta de los ocho se falsan a sí mismos
+./verificar-capsulas.sh --escribir-base # único escritor de brazos.esperado: reescribe la base de conducta
 ```
 
 Cada cápsula se corre cuatro veces: contra el servicio vulnerable (RC 0), contra el parche
@@ -323,6 +324,18 @@ que borrar el séptimo tampoco borre su lector. Comprobado que muerde: sin el br
 `RC 1` nombrando `entorno`; sin el séptimo, `RC 1` nombrando `censo`. Lo que este lector no
 puede impedir es que se borren los siete y el cotejo a la vez: un guardián no puede guardarse a
 sí mismo, y ahí la única huella es el `diff` del acto.
+
+Y ese censo leía nombres, no conductas. Un brazo vaciado por dentro —que conserva su nombre y su
+apunte pero deja de medir— seguía dando `RC 0`, porque el cotejo comparaba etiquetas. El **octavo
+brazo** cierra la grieta por el otro lado del sujeto: cada brazo publica su línea medida,
+`brazos.esperado` guarda la base fechada y comiteada, y el cierre incondicional coteja línea
+contra línea nombrando al brazo que no publica, al que publica otra línea y al que publica sin
+base. La base no se edita a mano: se reescribe con `--escribir-base`, de modo que un cambio de
+conducta deliberado aparece en el `diff` del acto, que es donde un humano lo lee. Fuera de
+alcance queda el brazo que reproduzca literalmente la línea esperada sin medir nada: la misma
+frontera de siempre, un guardián no puede guardarse a sí mismo. Comprobado que muerde: con el
+brazo del vocabulario vaciado, `RC 1` publicando esperado y medido; con el brazo del reloj
+borrado, `RC 1` nombrando `tiempo` desde el cotejo de nombres.
 
 Y el vocabulario del censo tampoco era una promesa. `no-medido`, `roto` y `cuelga` eran tres
 valores que el verificador aceptaba con un `;;` vacío —leídos y no usados— mientras el censo los
