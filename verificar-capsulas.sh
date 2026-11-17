@@ -158,7 +158,13 @@ PY
 # aqui y el cotejo vive al final de `self_test()`: borrar un brazo lo deja fuera de lo
 # ejercido y el cotejo lo nombra. Declarar el numero en vez de los nombres no serviria --un
 # brazo se puede sustituir por otro y el total no se mueve--.
-CENSO_BRAZOS="pareja frontera vocabulario tiempo alcance entorno censo"
+#
+# El nombre no basta, y se midio el 17-Nov-2026: un brazo vaciado por dentro --que conserva su
+# apunte y su nombre-- pasaba el cotejo. Por eso cada brazo publica ademas su linea medida y
+# el archivo `brazos.esperado` guarda la base fechada contra la que se coteja. Un cambio de
+# conducta legitimo cambia la linea, y quien lo hace la reescribe con `--escribir-base` en el
+# mismo acto: el cambio queda en el diff, que es donde un humano lo lee.
+CENSO_BRAZOS="pareja frontera vocabulario tiempo alcance entorno censo conducta"
 
 # Coteja lo ejercido contra lo declarado, dos listas de nombres separados por espacio. Publica
 # cada diferencia con nombre propio y devuelve RC 1 si hay alguna. Es puro a proposito: recibe
@@ -180,6 +186,51 @@ raise SystemExit(1 if (faltan or sobran) else 0)
 PY
 }
 
+# Publica la linea del brazo y la apunta para el cotejo de conducta. Una sola fuente: el texto
+# se escribe en el apunte al publicarse, no se repite, para que lo impreso y lo cotejado no
+# puedan divergir por editar uno solo de los dos.
+publicar_brazo() {
+  printf '%s\n' "$2"
+  printf '%s|%s\n' "$1" "$2" >> "$CONDUCTA_FICHERO"
+}
+
+# Coteja la conducta medida contra la base fechada, dos archivos de lineas `<brazo>|<texto>`.
+# Nombra el brazo que no publico linea, el que publico otra y el que publica sin base, y
+# devuelve RC 1 si hay alguno. Como `cotejar_censo`, es puro: recibe dos rutas y no invoca el
+# `--self-test`, para que el octavo brazo pueda falsarlo sin recursion.
+cotejar_conducta() {
+  python3 - "$1" "$2" <<'PY'
+import sys
+
+def leer(ruta):
+    pares = {}
+    with open(ruta, encoding="utf-8") as f:
+        for linea in f.read().splitlines():
+            if not linea.strip():
+                continue
+            nombre, _, texto = linea.partition("|")
+            pares[nombre.strip()] = texto
+    return pares
+
+medido = leer(sys.argv[1])
+esperado = leer(sys.argv[2])
+rc = 0
+for nombre in sorted(esperado):
+    if nombre not in medido:
+        print("FALLA  --self-test conducta: el brazo '%s' no publico linea" % nombre)
+        rc = 1
+    elif medido[nombre] != esperado[nombre]:
+        print("FALLA  --self-test conducta: el brazo '%s' publico otra linea" % nombre)
+        print("  esperado: %s" % esperado[nombre])
+        print("  medido:   %s" % medido[nombre])
+        rc = 1
+for nombre in sorted(set(medido) - set(esperado)):
+    print("FALLA  --self-test conducta: el brazo '%s' publico linea sin base" % nombre)
+    rc = 1
+raise SystemExit(rc)
+PY
+}
+
 # Sin esta prueba el cotejo seria otra marca sin lector: nadie sabria si sigue mirando. Se
 # copia una capsula que hoy certifica, se le cambia `invariante:` por `retorno` --dejando
 # `falsador: verifica`, que es la contradiccion-- y se exige RC distinto de 0 con la palabra
@@ -188,6 +239,8 @@ PY
 self_test() {
   origen=$(cd "$(dirname "$0")" && pwd) || return 1
   brazos_ok=""
+  CONDUCTA_FICHERO=$(mktemp "${TMPDIR:-/tmp}/conducta.XXXXXX") || return 1
+  trap 'rm -f "$CONDUCTA_FICHERO"' EXIT
   n_brazos=$(printf '%s\n' $CENSO_BRAZOS | wc -w | tr -d ' ')
   capsula=$(cd "$origen" && ls -d [0-9][0-9][0-9]-*/ 2>/dev/null | while read -r c; do
     if grep -q '^falsador: verifica' "$c"README.md 2>/dev/null; then echo "$c"; break; fi
@@ -221,7 +274,7 @@ self_test() {
     echo "FALLA  --self-test: la capsula con su declaracion original fue acusada (RC $rc_coherente)"
     return 1
   fi
-  echo "OK     --self-test: 'invariante: retorno' con 'falsador: verifica' -> RC $rc_contradiccion nombrando PAREJA; la misma capsula con lo que declara hoy -> RC 0"
+  publicar_brazo pareja "OK     --self-test: 'invariante: retorno' con 'falsador: verifica' -> RC $rc_contradiccion nombrando PAREJA; la misma capsula con lo que declara hoy -> RC 0"
   brazos_ok="$brazos_ok pareja"
 
   # Segundo brazo, la frontera: una capsula que declara no tener libro y cuyo PoC escribe uno
@@ -271,7 +324,7 @@ POC
     echo "FALLA  --self-test: la capsula sin residuo fue acusada (RC $rc_puro)"
     return 1
   fi
-  echo "OK     --self-test: PoC que escribe con 'falsador: fuera-de-alcance' -> RC $rc_residuo nombrando FRONTERA; el mismo PoC sin escribir -> RC 0"
+  publicar_brazo frontera "OK     --self-test: PoC que escribe con 'falsador: fuera-de-alcance' -> RC $rc_residuo nombrando FRONTERA; el mismo PoC sin escribir -> RC 0"
   brazos_ok="$brazos_ok frontera"
 
   # Tercer brazo, el vocabulario: una etiqueta del censo que no se mide es prosa con formato
@@ -347,7 +400,7 @@ POC
     echo "FALLA  --self-test: el 'roto' que dice la verdad fue acusado (RC $rc_verdad, $acusada linea(s))"
     return 1
   fi
-  echo "OK     --self-test: 'no-medido' con fingidos>0, 'roto' con RC 0, 'cuelga' que termina e 'invariante: tiempo' -> RC $rc_etiquetas nombrando NO-MEDIDO, ROTO, CUELGA y TIPO; el 'roto' verdadero -> RC 0"
+  publicar_brazo vocabulario "OK     --self-test: 'no-medido' con fingidos>0, 'roto' con RC 0, 'cuelga' que termina e 'invariante: tiempo' -> RC $rc_etiquetas nombrando NO-MEDIDO, ROTO, CUELGA y TIPO; el 'roto' verdadero -> RC 0"
   brazos_ok="$brazos_ok vocabulario"
 
   # Cuarto brazo, la dimension temporal: `reloj:` afirma que el sujeto pregunta la hora. Se
@@ -400,7 +453,7 @@ POC
     echo "FALLA  --self-test: la capsula cuyo veredicto si cambia con el instante fue acusada (RC $rc_sensible, $acusada linea(s))"
     return 1
   fi
-  echo "OK     --self-test: 'reloj: AHORA' ignorado -> RC $rc_reloj nombrando RELOJ; el mismo campo con un veredicto que cambia -> RC 0"
+  publicar_brazo tiempo "OK     --self-test: 'reloj: AHORA' ignorado -> RC $rc_reloj nombrando RELOJ; el mismo campo con un veredicto que cambia -> RC 0"
   brazos_ok="$brazos_ok tiempo"
 
   # Quinto brazo, el alcance de la foto: la novena regla medía el residuo solo donde miraba, y
@@ -454,7 +507,7 @@ POC
     echo "FALLA  --self-test: la capsula que no escribe fuera de su arbol fue acusada (RC $rc_callado)"
     return 1
   fi
-  echo "OK     --self-test: PoC que escapa por 'tempfile' y '~' -> RC $rc_alcance nombrando FRONTERA; el mismo PoC sin escapar -> RC 0"
+  publicar_brazo alcance "OK     --self-test: PoC que escapa por 'tempfile' y '~' -> RC $rc_alcance nombrando FRONTERA; el mismo PoC sin escapar -> RC 0"
   brazos_ok="$brazos_ok alcance"
 
   # Sexto brazo, el entorno de las otras dos puertas: el quinto mide el alcance de la foto y
@@ -493,7 +546,7 @@ POC
     echo "FALLA  --self-test: con_limite o reloj_en_jaula escribieron fuera de su casa ($n_neg archivo(s) en el entorno heredado)"
     return 1
   fi
-  echo "OK     --self-test: 'tempfile' y '~' bajo con_limite y reloj_en_jaula -> 0 archivo(s) fuera de su casa; el mismo PoC sin jaula -> $n_pos"
+  publicar_brazo entorno "OK     --self-test: 'tempfile' y '~' bajo con_limite y reloj_en_jaula -> 0 archivo(s) fuera de su casa; el mismo PoC sin jaula -> $n_pos"
   brazos_ok="$brazos_ok entorno"
 
   # Septimo brazo, el censo de los brazos: los seis anteriores se falsan a si mismos, pero
@@ -515,12 +568,40 @@ POC
     echo "FALLA  --self-test: el censo acuso al conjunto completo (RC $rc_censo_sano)"
     return 1
   fi
-  echo "OK     --self-test: censo de $n_brazos brazos cotejado por nombre; sin 'entorno' -> RC $rc_censo nombrandolo; con el censo entero -> RC 0"
+  publicar_brazo censo "OK     --self-test: censo de $n_brazos brazos cotejado por nombre; sin 'entorno' -> RC $rc_censo nombrandolo; con el censo entero -> RC 0"
   brazos_ok="$brazos_ok censo"
 
-  # Cotejo final, incondicional y fuera del septimo brazo: si un brazo desaparece del codigo no
-  # ejecuta su propio apunte, y el silencio es su unica huella. Puesto aqui, borrar el septimo
-  # tampoco borra su lector --el cotejo sigue viendo que falta `censo`--.
+  # Octavo brazo, la conducta de los brazos: el septimo coteja nombres, y un brazo vaciado por
+  # dentro conserva el suyo. Aqui se falsa `cotejar_conducta` en las dos direcciones con bases
+  # sinteticas --una con la linea del brazo `sonda`, otra vacia--: se exige que muerda
+  # nombrandola y que calle ante la base entera. Las bases son sinteticas a proposito: el brazo
+  # mide que el lector muerde, y la base real la coteja el cierre incondicional de mas abajo.
+  base_sana=$(mktemp "${TMPDIR:-/tmp}/base.XXXXXX") || return 1
+  base_mutilada=$(mktemp "${TMPDIR:-/tmp}/base.XXXXXX") || return 1
+  printf 'sonda|linea medida\n' > "$base_sana"
+  : > "$base_mutilada"
+  salida_conducta=$(cotejar_conducta "$base_mutilada" "$base_sana")
+  rc_conducta=$?
+  nombrado_conducta=$(printf '%s\n' "$salida_conducta" | grep -c "brazo 'sonda'")
+  (cotejar_conducta "$base_sana" "$base_sana" >/dev/null 2>&1)
+  rc_conducta_sano=$?
+  rm -f "$base_sana" "$base_mutilada"
+
+  if [ "$rc_conducta" -eq 0 ] || [ "$nombrado_conducta" -eq 0 ]; then
+    echo "FALLA  --self-test: la conducta no mordio a la base sin la linea de 'sonda' (RC $rc_conducta, nombrado $nombrado_conducta veces)"
+    return 1
+  fi
+  if [ "$rc_conducta_sano" -ne 0 ]; then
+    echo "FALLA  --self-test: la conducta acuso a la base entera (RC $rc_conducta_sano)"
+    return 1
+  fi
+  publicar_brazo conducta "OK     --self-test: conducta cotejada contra la base; sin la linea de un brazo -> RC $rc_conducta nombrandolo; con la base entera -> RC 0"
+  brazos_ok="$brazos_ok conducta"
+
+  # Cotejo final, incondicional y fuera del septimo y del octavo brazo: si un brazo desaparece
+  # del codigo no ejecuta su propio apunte, y el silencio es su unica huella. Puesto aqui,
+  # borrar el septimo tampoco borra su lector --el cotejo sigue viendo que falta `censo`--, y
+  # borrar el octavo tampoco borra el cotejo de conducta.
   salida_final=$(cotejar_censo "$brazos_ok" "$CENSO_BRAZOS")
   rc_final=$?
   if [ "$rc_final" -ne 0 ]; then
@@ -528,13 +609,33 @@ POC
     return 1
   fi
   echo "OK     --self-test: $n_brazos brazos ejercidos, todos declarados en el censo"
+
+  base_brazos="$origen/brazos.esperado"
+  if [ "${REESCRIBIR_BASE:-0}" = 1 ]; then
+    cp "$CONDUCTA_FICHERO" "$base_brazos" || return 1
+    echo "BASE   --self-test: brazos.esperado reescrito con $(wc -l < "$base_brazos" | tr -d ' ') lineas"
+  else
+    if [ ! -f "$base_brazos" ]; then
+      echo "FALLA  --self-test: falta la base de conducta brazos.esperado; creala con --escribir-base"
+      return 2
+    fi
+    salida_final_conducta=$(cotejar_conducta "$CONDUCTA_FICHERO" "$base_brazos")
+    rc_final_conducta=$?
+    if [ "$rc_final_conducta" -ne 0 ]; then
+      printf '%s\n' "$salida_final_conducta"
+      echo "PISTA  --self-test: si el cambio de conducta es deliberado, reescribe la base con --escribir-base"
+      return 1
+    fi
+    echo "OK     --self-test: conducta de $n_brazos brazos identica a brazos.esperado"
+  fi
   return 0
 }
 
 case "${1:-}" in
   --self-test) self_test; exit $? ;;
+  --escribir-base) REESCRIBIR_BASE=1; self_test; exit $? ;;
   "") ;;
-  *) echo "uso: $0 [--self-test]"; exit 20 ;;
+  *) echo "uso: $0 [--self-test | --escribir-base]"; exit 20 ;;
 esac
 
 fallos=0
