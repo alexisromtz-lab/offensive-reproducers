@@ -105,6 +105,12 @@ declararlo por escrito y que el lector lo cuente como lo que es. La séptima la 
 cotejo de la tabla de arriba contra los directorios que existen: una
 cápsula sin fila, o una fila sin cápsula, también se pone roja.
 
+Y una regla que el PoC cobra antes de que el gate la vea: **sin `--naive`, todas las vías
+tienen que coincidir.** Un veredicto que satisface a una sola esconde la regresión de la
+otra —la vía que se cree el rechazo quedaría certificada por lo que hizo su vecina—, así que
+el PoC sale con **RC 4** y lo nombra. Sólo el sujeto `--naive` puede mezclar, porque mezclar
+es exactamente lo que declara: cierra el caso reportado y deja abierta la clase.
+
 Contra un clon en blanco, el 17-Nov-2026:
 
 ```

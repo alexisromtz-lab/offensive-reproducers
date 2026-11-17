@@ -63,7 +63,11 @@ for capsula in [0-9][0-9][0-9]-*/; do
       (cd "$capsula" && python3 exploit_poc.py --app ../parche_mentiroso.py >/dev/null 2>&1)
       rc_falsador=$?
       if [ "$rc_falsador" -ne 0 ]; then
-        echo "FALLA  $capsula falsador: RC $rc_falsador, el PoC se cree el rechazo declarado"
+        if [ "$rc_falsador" -eq 4 ]; then
+          echo "FALLA  $capsula falsador: RC 4, una via se cree el rechazo aunque su vecina lo vea"
+        else
+          echo "FALLA  $capsula falsador: RC $rc_falsador, el PoC se cree el rechazo declarado"
+        fi
         censo_ok=no
       fi
       ;;
