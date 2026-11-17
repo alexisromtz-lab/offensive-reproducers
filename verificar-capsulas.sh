@@ -21,6 +21,14 @@
 # toma sobre toda ella, asi que lo redirigible pasa a ser residuo medido. Ruta absoluta
 # literal (`/tmp/x`, `/var`) y red siguen fuera: se declaran en el censo y no se cuentan cero.
 #
+# El alcance de ese arreglo, el 17-Nov-2026: el gate tiene tres puertas --la foto del residuo,
+# el limite de segundos y el reloj movido-- y solo la primera pinchaba el entorno; las otras
+# dos corrian con el HOME del host. Medido en una capsula de sonda bajo `limite:`, los dos
+# archivos que su PoC escribia por `tempfile` y por `~` aparecieron en la maquina sin que
+# ninguna jaula los viera. Ahora las tres pasan por `entorno_pinzado` --una lista de rutas, un
+# solo alcance-- y el sexto brazo del `--self-test` lo falsa por conducta, con el entorno
+# heredado como trampa y el mismo PoC sin jaula como control positivo.
+#
 # La decima: todo valor que el censo publica tiene lector. `no-medido`, `roto` y `cuelga`
 # pasaban por un `;;` vacio mientras el censo los imprimia como datos. Desde el 17-Nov-2026
 # se miden contra el mismo falsificador que los provoca: un vocabulario que crece sin lector
@@ -44,12 +52,26 @@ LIMITE_FALSADOR=8
 # enero de 2103, y cualquier fixture con fecha humana ya caduco. Se publica en el censo.
 RELOJ_FUERA=4200000000
 
+# Corre un comando con las rutas por defecto del sujeto (HOME, TMPDIR, TMP, TEMP y los XDG)
+# apuntadas a subdirectorios de la casa que se le pasa. Es la unica definicion de esas rutas:
+# si cada jaula llevara su propia lista, el gate tendria tres alcances y solo uno medido --que
+# es exactamente lo que paso hasta el 17-Nov-2026, cuando solo residuo_en_jaula pinchaba y las
+# otras dos puertas escribian con el HOME del host--.
+entorno_pinzado() {
+  _casa=$1
+  shift
+  mkdir -p "$_casa/home" "$_casa/tmp" || return 1
+  env HOME="$_casa/home" TMPDIR="$_casa/tmp" TMP="$_casa/tmp" TEMP="$_casa/tmp" \
+    XDG_CACHE_HOME="$_casa/home/.cache" XDG_CONFIG_HOME="$_casa/home/.config" \
+    XDG_DATA_HOME="$_casa/home/.local/share" XDG_STATE_HOME="$_casa/home/.local/state" \
+    XDG_RUNTIME_DIR="$_casa/tmp/run" "$@"
+}
+
 # Cuenta las lineas de diferencia entre el arbol de la jaula antes y despues de correr su PoC.
-# La foto se toma sobre la jaula entera --no solo sobre el subdirectorio de la capsula-- y las
-# rutas por defecto del sujeto (HOME, TMPDIR, TMP, TEMP y los XDG) se apuntan a subdirectorios
-# de la jaula: lo que el PoC escriba por `tempfile` o por `~` cae dentro de la foto. El limite
-# que sigue declarado: una ruta absoluta literal (`/tmp/x`, `/var`, `/etc`) o una escritura por
-# red no se ven aqui, y el censo lo publica como frontera, no como cero.
+# La foto se toma sobre la jaula entera --no solo sobre el subdirectorio de la capsula-- y el
+# PoC corre bajo entorno_pinzado: lo que escriba por `tempfile` o por `~` cae dentro de la foto.
+# El limite que sigue declarado: una ruta absoluta literal (`/tmp/x`, `/var`, `/etc`) o una
+# escritura por red no se ven aqui, y el censo lo publica como frontera, no como cero.
 residuo_en_jaula() {
   cap=$1
   jaula=$(mktemp -d "${TMPDIR:-/tmp}/frontera.XXXXXX") || { echo 99; return 0; }
@@ -60,11 +82,7 @@ residuo_en_jaula() {
   mkdir -p "$jaula/home" "$jaula/tmp" || { rm -rf "$jaula" "$libro"; echo 99; return 0; }
   sub="$jaula/${cap%/}"
   (cd "$jaula" && find . -type f ! -name '*.pyc' ! -path '*/__pycache__/*' | LC_ALL=C sort | xargs cksum) >"$libro/antes" 2>/dev/null
-  (cd "$sub" && env HOME="$jaula/home" TMPDIR="$jaula/tmp" TMP="$jaula/tmp" TEMP="$jaula/tmp" \
-    XDG_CACHE_HOME="$jaula/home/.cache" XDG_CONFIG_HOME="$jaula/home/.config" \
-    XDG_DATA_HOME="$jaula/home/.local/share" XDG_STATE_HOME="$jaula/home/.local/state" \
-    XDG_RUNTIME_DIR="$jaula/tmp/run" \
-    python3 exploit_poc.py >/dev/null 2>&1)
+  (cd "$sub" && entorno_pinzado "$jaula" python3 exploit_poc.py >/dev/null 2>&1)
   (cd "$jaula" && find . -type f ! -name '*.pyc' ! -path '*/__pycache__/*' | LC_ALL=C sort | xargs cksum) >"$libro/despues" 2>/dev/null
   escrito=$(diff "$libro/antes" "$libro/despues" 2>/dev/null | grep -c '^[<>]')
   rm -rf "$jaula" "$libro"
@@ -74,12 +92,15 @@ residuo_en_jaula() {
 # Corre el PoC de una capsula contra un sujeto con limite de segundos y publica
 # "RC=<rc> FINGIDOS=<n>". El falsificador ya dice cuantos rechazos fingidos vio --con cero
 # fingidos un RC 0 no absolvio nada-- y ese numero, que hasta el 17-Nov-2026 se tiraba a
-# /dev/null, es lo que decide si su veredicto significa algo. RC 124 si no termina.
+# /dev/null, es lo que decide si su veredicto significa algo. El PoC corre bajo entorno_pinzado,
+# asi que una escritura por `tempfile` o por `~` cae en la casa y no en el host. RC 124 si no
+# termina y 99 si la casa no se pudo montar.
 con_limite() {
   cap=$1
   sujeto=$2
   limite=$3
-  python3 - "$cap" "$sujeto" "$limite" <<'PY'
+  casa=$(mktemp -d "${TMPDIR:-/tmp}/limite-casa.XXXXXX") || { echo "RC=99 FINGIDOS=0"; return 0; }
+  entorno_pinzado "$casa" python3 - "$cap" "$sujeto" "$limite" <<'PY'
 import subprocess, sys
 cap, sujeto, limite = sys.argv[1], sys.argv[2], float(sys.argv[3])
 try:
@@ -94,12 +115,15 @@ for linea in (r.stdout or "").splitlines():
         fingidos = int(linea.split("rechazos fingidos=")[1].split()[0])
 print("RC=%d FINGIDOS=%d" % (r.returncode, fingidos))
 PY
+  rm -rf "$casa"
 }
 
 # Corre el PoC con el instante movido y publica "RC=<rc>". El inyector viaja como
 # `sitecustomize.py` en una jaula que hace de PYTHONPATH, asi que el sujeto pregunta la hora
 # por el mismo camino que ya usaba y no se le toca una linea. Sin dormir y sin mock: se mueve
-# la respuesta, no se espera. RC 124 si no termina, 99 si la jaula no se pudo montar.
+# la respuesta, no se espera. El PoC corre bajo entorno_pinzado --casa aparte de la jaula del
+# inyector, para que un `.py` que escriba el sujeto no acabe en el PYTHONPATH--. RC 124 si no
+# termina, 99 si la jaula no se pudo montar.
 reloj_en_jaula() {
   cap=$1
   instante=$2
@@ -107,19 +131,20 @@ reloj_en_jaula() {
   origen=$(cd "$(dirname "$0")" && pwd) || { echo "RC=99"; return 0; }
   jaula=$(mktemp -d "${TMPDIR:-/tmp}/reloj.XXXXXX") || { echo "RC=99"; return 0; }
   cp "$origen/inyector_reloj.py" "$jaula/sitecustomize.py" || { rm -rf "$jaula"; echo "RC=99"; return 0; }
-  python3 - "$cap" "$jaula" "$instante" "$limite" <<'PY'
-import os, subprocess, sys
-cap, jaula, instante, limite = sys.argv[1], sys.argv[2], sys.argv[3], float(sys.argv[4])
-entorno = dict(os.environ, PYTHONPATH=jaula, AHORA=instante)
+  casa=$(mktemp -d "${TMPDIR:-/tmp}/reloj-casa.XXXXXX") || { rm -rf "$jaula"; echo "RC=99"; return 0; }
+  entorno_pinzado "$casa" PYTHONPATH="$jaula" AHORA="$instante" \
+    python3 - "$cap" "$limite" <<'PY'
+import subprocess, sys
+cap, limite = sys.argv[1], float(sys.argv[2])
 try:
-    r = subprocess.run(["python3", "exploit_poc.py"], cwd=cap, env=entorno,
+    r = subprocess.run(["python3", "exploit_poc.py"], cwd=cap,
                        capture_output=True, text=True, errors="replace", timeout=limite)
 except subprocess.TimeoutExpired:
     print("RC=124")
     raise SystemExit(0)
 print("RC=%d" % r.returncode)
 PY
-  rm -rf "$jaula"
+  rm -rf "$jaula" "$casa"
 }
 
 # Sin esta prueba el cotejo seria otra marca sin lector: nadie sabria si sigue mirando. Se
@@ -391,6 +416,44 @@ POC
     return 1
   fi
   echo "OK     --self-test: PoC que escapa por 'tempfile' y '~' -> RC $rc_alcance nombrando FRONTERA; el mismo PoC sin escapar -> RC 0"
+
+  # Sexto brazo, el entorno de las otras dos puertas: el quinto mide el alcance de la foto y
+  # residuo_en_jaula pincha HOME/TMPDIR/XDG, pero con_limite y reloj_en_jaula heredaban los del
+  # host --medido el 17-Nov-2026: tres puertas, un solo alcance--. Se mide por conducta y sin
+  # tocar el HOME real: la trampa es el propio entorno heredado, que si las funciones no
+  # pincharan seria su destino. El control positivo --el mismo PoC sin jaula, que si la
+  # llena-- distingue el arreglo de una trampa sin lector.
+  trampa=$(mktemp -d "${TMPDIR:-/tmp}/entorno.XXXXXX") || return 1
+  mkdir "$trampa/capsula" || return 1
+  cat >"$trampa/capsula/exploit_poc.py" <<'POC'
+import os, tempfile
+with open(os.path.expanduser("~/.escape-brazo"), "w") as f:
+    f.write("x")
+with tempfile.NamedTemporaryFile("w", prefix="escapa-", delete=False) as f:
+    f.write("x")
+print("[FALSADOR] rechazos fingidos=0 []")
+POC
+  pos=$(mktemp -d "${TMPDIR:-/tmp}/entorno-pos.XXXXXX") || return 1
+  (cd "$trampa/capsula" && HOME="$pos" TMPDIR="$pos" python3 exploit_poc.py >/dev/null 2>&1)
+  n_pos=$(find "$pos" -type f \( -name '.escape-brazo' -o -name 'escapa-*' \) | wc -l | tr -d ' ')
+  neg=$(mktemp -d "${TMPDIR:-/tmp}/entorno-neg.XXXXXX") || return 1
+  (
+    export HOME="$neg" TMPDIR="$neg"
+    con_limite "$trampa/capsula" ../parche_mentiroso.py "$LIMITE_FALSADOR" >/dev/null 2>&1
+    reloj_en_jaula "$trampa/capsula" "$RELOJ_FUERA" "$LIMITE_FALSADOR" >/dev/null 2>&1
+  )
+  n_neg=$(find "$neg" -type f \( -name '.escape-brazo' -o -name 'escapa-*' \) | wc -l | tr -d ' ')
+  rm -rf "$trampa" "$pos" "$neg"
+
+  if [ "$n_pos" -lt 1 ]; then
+    echo "FALLA  --self-test: el PoC de prueba no escribio ni sin jaula ($n_pos archivo(s)); el detector no mide"
+    return 1
+  fi
+  if [ "$n_neg" -ne 0 ]; then
+    echo "FALLA  --self-test: con_limite o reloj_en_jaula escribieron fuera de su casa ($n_neg archivo(s) en el entorno heredado)"
+    return 1
+  fi
+  echo "OK     --self-test: 'tempfile' y '~' bajo con_limite y reloj_en_jaula -> 0 archivo(s) fuera de su casa; el mismo PoC sin jaula -> $n_pos"
   return 0
 }
 
