@@ -38,9 +38,14 @@ técnico reconstruido sobre un entorno mínimo propio.
 | 009 | Digest truncado a cuatro hex (la sal cierra el informe, no el fallo) | A02 | [009-truncated-hash-salt](009-truncated-hash-salt/) | `python3 exploit_poc.py` |
 | 010 | La validación acepta lo que su propia serialización no devuelve (`inf` que se guarda `null`) | A08 | [010-serialization-validation-asymmetry](010-serialization-validation-asymmetry/) | `python3 exploit_poc.py` |
 | 011 | El registro pierde el evento que importa y la vigilancia lo da por registrado (falla abierto) | A09 | [011-logging-fail-open](011-logging-fail-open/) | `python3 exploit_poc.py` |
+| 013 | La credencial cambia y lo que la credencial vieja ya había emitido sigue entrando (la sesión y el «recordarme» sobreviven) | A07 | [013-session-survives-credential-change](013-session-survives-credential-change/) | `python3 exploit_poc.py` |
 
-**Cobertura OWASP Top 10 (2021): ocho de las diez categorías.** A01 cubierta por 004 y 005 · A02 por 001 y 009 · A03 por 006 · A04 por 008 · A05 por 007 · A08 por 003 y 010 · A09 por 011 · A10 por 002. Fuera quedan A06 (componentes vulnerables y desactualizados) y A07 (fallos de identificación y autenticación). A06 queda descartada por diseño: demostrarla exige una dependencia real con CVE real, y esta casa no instala dependencias. La tabla se coteja contra los directorios en `./verificar-capsulas.sh`; esta línea se mide con
+**Cobertura OWASP Top 10 (2021): nueve de las diez categorías.** A01 cubierta por 004 y 005 · A02 por 001 y 009 · A03 por 006 · A04 por 008 · A05 por 007 · A07 por 013 · A08 por 003 y 010 · A09 por 011 · A10 por 002. Fuera queda A06 (componentes vulnerables y desactualizados), descartada por diseño: demostrarla exige una dependencia real con CVE real, y esta casa no instala dependencias. La tabla se coteja contra los directorios en `./verificar-capsulas.sh`; esta línea se mide con
 `grep -hoE 'A(0[0-9]|10):2021' */README.md | sort -u`.
+
+La numeración salta de 011 a 013: el sujeto de 013 nació con otro nombre de directorio y se renumeró
+antes de publicarse en vez de renumerar un directorio ya citado. El hueco es de nombre, no de
+cápsula: no hay una 012 pendiente.
 
 ## Contrato de cada cápsula
 
@@ -125,11 +130,12 @@ OK     008-insecure-design-coupon-ledger/ (vulnerable=0 parche=1 ingenuo=0 roto=
 OK     009-truncated-hash-salt/ (vulnerable=0 parche=1 ingenuo=0 roto=3 control=3 falsador=cuelga)
 OK     010-serialization-validation-asymmetry/ (vulnerable=0 parche=1 ingenuo=0 roto=3 control=3 falsador=verifica)
 OK     011-logging-fail-open/ (vulnerable=0 parche=1 ingenuo=0 roto=3 control=3 falsador=verifica)
+OK     013-session-survives-credential-change/ (vulnerable=0 parche=1 ingenuo=0 roto=3 control=3 falsador=verifica)
 
-11/11 capsulas: ataque RC 0, parche RC 1, parche ingenuo RC 0, sujeto roto RC 3
-3/11 capsulas declaran 'falsador: verifica' y su PoC no se cree un rechazo declarado;
+12/12 capsulas: ataque RC 0, parche RC 1, parche ingenuo RC 0, sujeto roto RC 3
+4/12 capsulas declaran 'falsador: verifica' y su PoC no se cree un rechazo declarado;
 el resto publica su censo en el README (fuera-de-alcance · no-medido · cuelga · roto).
-OK     tabla del README: 11 filas, 11 directorios
+OK     tabla del README: 12 filas, 12 directorios
 ```
 
 Sin cápsulas el script falla en vez de salir en verde: un cero de inventario no es una
@@ -169,7 +175,7 @@ PoC y qué dio el censo— y `./verificar-capsulas.sh` las lee:
 
 | estado | qué mide | cápsulas |
 |---|---|---|
-| `verifica` | el PoC mira el libro después del rechazo y ve el efecto igual | 005 · 010 · 011 |
+| `verifica` | el PoC mira el libro después del rechazo y ve el efecto igual | 005 · 010 · 011 · 013 |
 | `fuera-de-alcance` | el efecto **es** el valor de retorno que el falsificador descarta al lanzar: no hay estado que mirar, ni sano ni engañado | 001 · 002 · 006 · 007 · 008 |
 | `no-medido` | el testigo no declaró ningún rechazo que falsificar (0 fingidos) | 003 |
 | `roto` | el falsificador altera el sujeto hasta romperlo (RC 3) | 004 |
@@ -185,8 +191,16 @@ Esa frontera se publicó de las dos direcciones. `005` y `010` estaban **engaña
 16-Nov-2026: las dos tenían la comprobación de estado escrita y no la consultaban dentro del
 `except`. En `010` eran tres líneas (`frontera.asiento` y `frontera.puede` ya existían); en
 `005` el veredicto pasó a darlo el sistema de archivos y la excepción quedó como testigo. Hoy
-las tres cápsulas de estado se certifican, y el gate corre el falsificador en cada push: si
+las cuatro cápsulas de estado se certifican, y el gate corre el falsificador en cada push: si
 alguien devuelve un `except` que se cree el rechazo, el comando se pone rojo.
+
+`013` añade una lección que las otras tres no dieron: **el lector de estado puede estar mal elegido
+y acusar al parche que cierra.** La lectura natural de su falla —mirar la marca `revocada` en el
+registro— da `[A CIEGAS]` también contra el parche bueno, porque el parche canónico no revoca nada:
+invalida por comparación de credencial. Un oráculo así produce un falso rojo, que es el error que no
+bloquea ninguna entrega y por eso nadie corrige. Lo que separa a los dos lectores no es el fervor
+—es haber corrido el oráculo contra el sujeto que debe absolver— y la cápsula lo publica medido en
+su propio README.
 
 ## Trabajo sobre tu servicio
 
