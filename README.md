@@ -57,7 +57,7 @@ NNN-<vector>/
 └── patch_secure.py     # corrección canónica + el parche ingenuo, para refutarlo
 ```
 
-Ocho reglas que se comprueban, no se prometen:
+Nueve reglas que se comprueban, no se prometen:
 
 1. **Determinista.** Dos corridas, el mismo resultado. Sin reloj, sin azar, sin red externa.
    Las cápsulas que necesitan un servicio levantan uno efímero en `127.0.0.1` y lo apagan
@@ -87,15 +87,21 @@ Ocho reglas que se comprueban, no se prometen:
    que no hay estado que mirar; el verificador la pone roja (`PAREJA`) en vez de absolverla.
    Ese cotejo también tiene lector: `./verificar-capsulas.sh --self-test` planta la
    contradicción en un directorio temporal, exige el rojo, la deshace y exige el verde.
+9. **La frontera se mide, no se cree.** `falsador: fuera-de-alcance` afirma que el PoC no
+   necesita ningún libro que mirar. Eso era una promesa: el 17-Nov-2026 se midió corriendo
+   cada PoC en una jaula temporal y cotejando su árbol de archivos antes y después —cinco
+   cápsulas, cero residuo—, y desde entonces lo comprueba el gate. Una cápsula que declara no
+   tener libro y escribe uno se nombra `FRONTERA` y se pone roja: es el falso verde en la
+   dirección peligrosa, porque lo que el lector cree que el PoC no toca, ya lo tocó.
 
 ## Verificar todo
 
-Un solo comando comprueba las ocho promesas en todas las cápsulas, y es el mismo que
+Un solo comando comprueba las nueve promesas en todas las cápsulas, y es el mismo que
 corre el CI en cada push — el badge de arriba es su resultado, no una promesa:
 
 ```bash
-./verificar-capsulas.sh             # las ocho reglas sobre todas las cápsulas
-./verificar-capsulas.sh --self-test # el cotejo de la pareja se falsa a sí mismo
+./verificar-capsulas.sh             # las nueve reglas sobre todas las cápsulas
+./verificar-capsulas.sh --self-test # la pareja y la frontera se falsan a sí mismas
 ```
 
 Cada cápsula se corre cuatro veces: contra el servicio vulnerable (RC 0), contra el parche
@@ -119,7 +125,10 @@ declararlo por escrito y que el lector lo cuente como lo que es. La séptima cot
 `verifica` —o `estado` con `fuera-de-alcance`— se nombra `PAREJA` y se pone roja, porque
 declarar que el PoC mira el estado y que no hay estado que mirar no es una cápsula débil: es
 una contradicción. La octava la cierra el cotejo de la tabla de arriba contra los directorios
-que existen: una cápsula sin fila, o una fila sin cápsula, también se pone roja.
+que existen: una cápsula sin fila, o una fila sin cápsula, también se pone roja. La novena
+mide la frontera en vez de creerla: si una cápsula declara `fuera-de-alcance`, su PoC corre en
+una jaula y el árbol de archivos se coteja antes y después; escribir algo ahí es `FRONTERA` y
+es rojo.
 
 Y una regla que el PoC cobra antes de que el gate la vea: **sin `--naive`, todas las vías
 tienen que coincidir.** Un veredicto que satisface a una sola esconde la regresión de la
@@ -130,14 +139,14 @@ es exactamente lo que declara: cierra el caso reportado y deja abierta la clase.
 Contra un clon en blanco, el 17-Nov-2026:
 
 ```
-OK     001-jwt-algorithm-confusion/ (vulnerable=0 parche=1 ingenuo=0 roto=3 control=n/a falsador=fuera-de-alcance)
-OK     002-ssrf-pdf-renderer/ (vulnerable=0 parche=1 ingenuo=0 roto=3 control=n/a falsador=fuera-de-alcance)
+OK     001-jwt-algorithm-confusion/ (vulnerable=0 parche=1 ingenuo=0 roto=3 control=n/a falsador=fuera-de-alcance+medido)
+OK     002-ssrf-pdf-renderer/ (vulnerable=0 parche=1 ingenuo=0 roto=3 control=n/a falsador=fuera-de-alcance+medido)
 OK     003-insecure-deserialization-rce/ (vulnerable=0 parche=1 ingenuo=0 roto=3 control=n/a falsador=no-medido)
 OK     004-idor-object-authorization/ (vulnerable=0 parche=1 ingenuo=0 roto=3 control=n/a falsador=roto)
 OK     005-archive-path-traversal/ (vulnerable=0 parche=1 ingenuo=0 roto=3 control=n/a falsador=verifica)
-OK     006-sql-injection-numeric-context/ (vulnerable=0 parche=1 ingenuo=0 roto=3 control=n/a falsador=fuera-de-alcance)
-OK     007-cors-origin-reflection/ (vulnerable=0 parche=1 ingenuo=0 roto=3 control=n/a falsador=fuera-de-alcance)
-OK     008-insecure-design-coupon-ledger/ (vulnerable=0 parche=1 ingenuo=0 roto=3 control=3 falsador=fuera-de-alcance)
+OK     006-sql-injection-numeric-context/ (vulnerable=0 parche=1 ingenuo=0 roto=3 control=n/a falsador=fuera-de-alcance+medido)
+OK     007-cors-origin-reflection/ (vulnerable=0 parche=1 ingenuo=0 roto=3 control=n/a falsador=fuera-de-alcance+medido)
+OK     008-insecure-design-coupon-ledger/ (vulnerable=0 parche=1 ingenuo=0 roto=3 control=3 falsador=fuera-de-alcance+medido)
 OK     009-truncated-hash-salt/ (vulnerable=0 parche=1 ingenuo=0 roto=3 control=3 falsador=cuelga)
 OK     010-serialization-validation-asymmetry/ (vulnerable=0 parche=1 ingenuo=0 roto=3 control=3 falsador=verifica)
 OK     011-logging-fail-open/ (vulnerable=0 parche=1 ingenuo=0 roto=3 control=3 falsador=verifica)
@@ -146,6 +155,8 @@ OK     013-session-survives-credential-change/ (vulnerable=0 parche=1 ingenuo=0 
 12/12 capsulas: ataque RC 0, parche RC 1, parche ingenuo RC 0, sujeto roto RC 3
 4/12 capsulas declaran 'falsador: verifica' y su PoC no se cree un rechazo declarado;
 el resto publica su censo en el README (fuera-de-alcance · no-medido · cuelga · roto).
+5/12 declaran 'falsador: fuera-de-alcance' y su PoC se midio en jaula: 0 con residuo.
+cero residuo = la frontera se comprobo en esta corrida; no es una promesa del README.
 7/12 declaran 'invariante: estado' (el falsificador tiene libro que mirar) y
 5/12 'invariante: retorno' (el efecto es el valor de retorno): pareja cotejada con 'falsador:' en esta corrida.
 OK     tabla del README: 12 filas, 12 directorios
@@ -214,6 +225,18 @@ Esa frontera se publicó de las dos direcciones. `005` y `010` estaban **engaña
 `005` el veredicto pasó a darlo el sistema de archivos y la excepción quedó como testigo. Hoy
 las cuatro cápsulas de estado se certifican, y el gate corre el falsificador en cada push: si
 alguien devuelve un `except` que se cree el rechazo, el comando se pone rojo.
+
+Y la frontera misma dejó de ser una promesa. El 17-Nov-2026 se midió el residuo de las cinco
+cápsulas `fuera-de-alcance` corriendo cada PoC en una jaula y cotejando su árbol de archivos
+antes y después: **cero residuo en las cinco**. El dato importa porque reencuadra el censo. Se
+creía que el `fuera-de-alcance` no se podía medir; lo que no se había hecho era medirlo. Desde
+entonces el gate lo mide en cada corrida y lo publica (`fuera-de-alcance+medido`): declarar que
+no hay libro que mirar y escribir uno es `FRONTERA` y es rojo. La medición se toma sobre el
+estado **prístino**, antes de que la corrida toque la cápsula: tomada después, la foto «antes»
+ya incluiría lo que el propio PoC acaba de escribir y el residuo sería invisible —el falso
+verde que la regla existe para cazar, cometido por la regla misma. Ese error se cometió y se
+corrigió en la misma tarde, y por eso `--self-test` tiene un segundo brazo que planta un PoC
+que escribe y exige el rojo.
 
 `013` añade una lección que las otras tres no dieron: **el lector de estado puede estar mal elegido
 y acusar al parche que cierra.** La lectura natural de su falla —mirar la marca `revocada` en el
