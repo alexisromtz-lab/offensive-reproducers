@@ -96,9 +96,9 @@ Once reglas que se comprueban, no se prometen:
    dirección peligrosa, porque lo que el lector cree que el PoC no toca, ya lo tocó. Y esa
    misma tarde se midió el **alcance** de la foto, que es otra cosa: un PoC de sonda que
    escribía por `tempfile` y por `~` publicaba `0 con residuo` con la cápsula en verde —el
-   cero era de alcance, no de conducta—, así que la jaula apunta `HOME`, `TMPDIR`, `TMP`,
-   `TEMP` y los `XDG_*` a subdirectorios suyos y fotografía la jaula entera. Lo que sigue
-   fuera se declara y no se cuenta cero: ruta absoluta literal y red.
+   cero era de alcance, no de conducta—, así que **las tres jaulas del gate** apuntan `HOME`,
+   `TMPDIR`, `TMP`, `TEMP` y los `XDG_*` a subdirectorios propios y la foto cubre la jaula
+   entera. Lo que sigue fuera se declara y no se cuenta cero: ruta absoluta literal y red.
 10. **Toda etiqueta del censo tiene lector.** Un `falsador:` que el verificador acepta y no
    mide es prosa con formato de dato. El 17-Nov-2026 se midió el vocabulario entero: `roto`
    exige `RC 3` contra el falsificador, `cuelga` exige que el PoC **no termine** en el límite
@@ -125,7 +125,7 @@ corre el CI en cada push — el badge de arriba es su resultado, no una promesa:
 
 ```bash
 ./verificar-capsulas.sh             # las once reglas sobre todas las cápsulas
-./verificar-capsulas.sh --self-test # la pareja, la frontera, su alcance, el vocabulario y el reloj se falsan a sí mismos
+./verificar-capsulas.sh --self-test # la pareja, la frontera, su alcance, el entorno, el vocabulario y el reloj se falsan a sí mismos
 ```
 
 Cada cápsula se corre cuatro veces: contra el servicio vulnerable (RC 0), contra el parche
@@ -156,7 +156,10 @@ cápsula, en `HOME`, en `TMPDIR` o en los `XDG_*`, que la jaula apunta a subdire
 es `FRONTERA` y es rojo, y la ruta absoluta literal y la red se quedan fuera y el censo las
 publica como frontera declarada. Esa foto tiene falsador propio en el quinto brazo del
 `--self-test`: planta un PoC que escapa por `tempfile` y por `~`, exige el rojo, lo reemplaza
-por el mismo PoC sin escapar y exige el verde. La décima lee el resto del vocabulario, que hasta el 17-Nov-2026 pasaba por un `;;`
+por el mismo PoC sin escapar y exige el verde. El sexto brazo mide lo que el quinto no puede
+ver: que las **otras dos** jaulas del gate —la del límite y la del reloj— tampoco hereden el
+entorno del host, con el entorno heredado como trampa propia y el mismo PoC sin jaula como
+control positivo. La décima lee el resto del vocabulario, que hasta el 17-Nov-2026 pasaba por un `;;`
 vacío: `roto` exige `RC 3`, `cuelga` exige no terminar dentro del límite y `no-medido` exige
 `rechazos fingidos=0`; un valor fuera de esos cinco se nombra y se para. La undécima mueve el
 reloj: si la cápsula declara `reloj: AHORA`, su PoC se corre otra vez con el instante en
@@ -292,6 +295,19 @@ foto se vería a sí misma y toda cápsula tendría residuo—; el censo publica
 frontera declarada: ruta absoluta literal y red. El quinto brazo del `--self-test` falsa el
 arreglo en las dos direcciones, y se comprobó que **muerde**: revertida la jaula, la cápsula de
 sonda vuelve a salir `OK` y el brazo se pone rojo nombrando `FRONTERA` como ausente.
+
+Y el alcance tenía, a su vez, un alcance. El arreglo del quinto brazo pinchó el entorno en la
+jaula que fotografía, pero el gate tiene tres puertas —la foto del residuo, el límite de
+segundos y el reloj movido— y las otras dos seguían corriendo con el `HOME` del host: el gate
+publicaba que ningún PoC toca la máquina del que lo corre, y eso era cierto en **una de sus
+tres rutas**. Se midió el 17-Nov-2026 con una cápsula de sonda bajo `limite:` cuyo PoC escribía
+por `tempfile` y por `~`: los dos archivos aparecieron en el host y ninguna jaula los vio. Hoy
+las tres rutas pasan por una sola función —una lista de rutas, un solo alcance— y cada una
+monta su casa; la del reloj, además, mantiene la casa fuera del `PYTHONPATH` del inyector, para
+que un `.py` que escriba el sujeto no se importe solo. El sexto brazo del `--self-test` lo falsa
+por conducta y sin tocar el `HOME` real —el entorno heredado es la trampa, y el mismo PoC sin
+jaula es su control positivo—: revertido el pinchazo, el brazo se pone rojo nombrando los dos
+archivos y los cinco anteriores siguen verdes.
 
 Y el vocabulario del censo tampoco era una promesa. `no-medido`, `roto` y `cuelga` eran tres
 valores que el verificador aceptaba con un `;;` vacío —leídos y no usados— mientras el censo los
