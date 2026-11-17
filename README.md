@@ -93,7 +93,12 @@ Once reglas que se comprueban, no se prometen:
    cada PoC en una jaula temporal y cotejando su árbol de archivos antes y después —cinco
    cápsulas, cero residuo—, y desde entonces lo comprueba el gate. Una cápsula que declara no
    tener libro y escribe uno se nombra `FRONTERA` y se pone roja: es el falso verde en la
-   dirección peligrosa, porque lo que el lector cree que el PoC no toca, ya lo tocó.
+   dirección peligrosa, porque lo que el lector cree que el PoC no toca, ya lo tocó. Y esa
+   misma tarde se midió el **alcance** de la foto, que es otra cosa: un PoC de sonda que
+   escribía por `tempfile` y por `~` publicaba `0 con residuo` con la cápsula en verde —el
+   cero era de alcance, no de conducta—, así que la jaula apunta `HOME`, `TMPDIR`, `TMP`,
+   `TEMP` y los `XDG_*` a subdirectorios suyos y fotografía la jaula entera. Lo que sigue
+   fuera se declara y no se cuenta cero: ruta absoluta literal y red.
 10. **Toda etiqueta del censo tiene lector.** Un `falsador:` que el verificador acepta y no
    mide es prosa con formato de dato. El 17-Nov-2026 se midió el vocabulario entero: `roto`
    exige `RC 3` contra el falsificador, `cuelga` exige que el PoC **no termine** en el límite
@@ -120,7 +125,7 @@ corre el CI en cada push — el badge de arriba es su resultado, no una promesa:
 
 ```bash
 ./verificar-capsulas.sh             # las once reglas sobre todas las cápsulas
-./verificar-capsulas.sh --self-test # la pareja, la frontera, el vocabulario y el reloj se falsan a sí mismos
+./verificar-capsulas.sh --self-test # la pareja, la frontera, su alcance, el vocabulario y el reloj se falsan a sí mismos
 ```
 
 Cada cápsula se corre cuatro veces: contra el servicio vulnerable (RC 0), contra el parche
@@ -146,8 +151,12 @@ declarar que el PoC mira el estado y que no hay estado que mirar no es una cáps
 una contradicción. La octava la cierra el cotejo de la tabla de arriba contra los directorios
 que existen: una cápsula sin fila, o una fila sin cápsula, también se pone roja. La novena
 mide la frontera en vez de creerla: si una cápsula declara `fuera-de-alcance`, su PoC corre en
-una jaula y el árbol de archivos se coteja antes y después; escribir algo ahí es `FRONTERA` y
-es rojo. La décima lee el resto del vocabulario, que hasta el 17-Nov-2026 pasaba por un `;;`
+una jaula y el árbol de archivos se coteja antes y después; escribir algo ahí —dentro de la
+cápsula, en `HOME`, en `TMPDIR` o en los `XDG_*`, que la jaula apunta a subdirectorios suyos—
+es `FRONTERA` y es rojo, y la ruta absoluta literal y la red se quedan fuera y el censo las
+publica como frontera declarada. Esa foto tiene falsador propio en el quinto brazo del
+`--self-test`: planta un PoC que escapa por `tempfile` y por `~`, exige el rojo, lo reemplaza
+por el mismo PoC sin escapar y exige el verde. La décima lee el resto del vocabulario, que hasta el 17-Nov-2026 pasaba por un `;;`
 vacío: `roto` exige `RC 3`, `cuelga` exige no terminar dentro del límite y `no-medido` exige
 `rechazos fingidos=0`; un valor fuera de esos cinco se nombra y se para. La undécima mueve el
 reloj: si la cápsula declara `reloj: AHORA`, su PoC se corre otra vez con el instante en
@@ -178,7 +187,7 @@ OK     013-session-survives-credential-change/ (vulnerable=0 parche=1 ingenuo=0 
 12/12 capsulas: ataque RC 0, parche RC 1, parche ingenuo RC 0, sujeto roto RC 3
 4/12 capsulas declaran 'falsador: verifica' y su PoC no se cree un rechazo declarado.
 5/12 declaran 'falsador: fuera-de-alcance' y su PoC se midio en jaula: 0 con residuo.
-cero residuo = la frontera se comprobo en esta corrida; no es una promesa del README.
+cero residuo = no escribio ni en su arbol ni por HOME/TMPDIR/XDG; ruta absoluta y red, fuera.
 12/12 etiquetas de 'falsador:' se midieron en esta corrida: fuera-de-alcance en jaula,
 verifica contra el parche mentiroso, no-medido por 'rechazos fingidos=0', roto por RC 3 y
 cuelga por no terminar en 5s. Una etiqueta sin lector no se publica.
@@ -229,7 +238,7 @@ PoC y qué dio el censo— y `./verificar-capsulas.sh` las lee:
 | estado | qué afirma | cápsulas | cómo lo mide el gate |
 |---|---|---|---|
 | `verifica` | el PoC mira el libro después del rechazo y ve el efecto igual | 005 · 010 · 011 · 013 | `RC 0` contra `parche_mentiroso.py` |
-| `fuera-de-alcance` | el efecto **es** el valor de retorno que el falsificador descarta al lanzar: no hay estado que mirar, ni sano ni engañado | 001 · 002 · 006 · 007 · 008 | el PoC corre en jaula y su árbol no cambia |
+| `fuera-de-alcance` | el efecto **es** el valor de retorno que el falsificador descarta al lanzar: no hay estado que mirar, ni sano ni engañado | 001 · 002 · 006 · 007 · 008 | el PoC corre en jaula y no cambian su árbol, `HOME`, `TMPDIR` ni los `XDG_*` |
 | `no-medido` | el testigo no declaró ningún rechazo que falsificar (0 fingidos) | 003 | `rechazos fingidos=0` en el contador del falsificador |
 | `roto` | el falsificador altera el sujeto hasta romperlo (RC 3) | 004 | `RC 3` contra `parche_mentiroso.py` |
 | `cuelga` | el falsificador no termina sobre ese sujeto | 009 | no termina en 5 s (límite declarado) |
@@ -270,6 +279,19 @@ ya incluiría lo que el propio PoC acaba de escribir y el residuo sería invisib
 verde que la regla existe para cazar, cometido por la regla misma. Ese error se cometió y se
 corrigió en la misma tarde, y por eso `--self-test` tiene un segundo brazo que planta un PoC
 que escribe y exige el rojo.
+
+Ese cero tenía, además, un **alcance**, y medirlo movió el instrumento otra vez. El 17-Nov-2026
+se plantó una cápsula de sonda cuyo PoC escribía un archivo por `tempfile` y otro en `~`: el
+gate publicaba `0 con residuo` y la cápsula salía `OK`, con dos archivos recién escritos fuera
+de la jaula —uno en la casa del usuario, donde podía contaminar la corrida siguiente y con ella
+la afirmación de determinismo—. El defecto no era la regla: era la foto, tomada sobre el
+subdirectorio de la cápsula mientras el sujeto escribía por las rutas que el sistema le da por
+defecto. Hoy la jaula apunta `HOME`, `TMPDIR`, `TMP`, `TEMP` y los cuatro `XDG_*` a
+subdirectorios suyos y fotografía la jaula entera —el libro del antes/después vive fuera, o la
+foto se vería a sí misma y toda cápsula tendría residuo—; el censo publica el resto como
+frontera declarada: ruta absoluta literal y red. El quinto brazo del `--self-test` falsa el
+arreglo en las dos direcciones, y se comprobó que **muerde**: revertida la jaula, la cápsula de
+sonda vuelve a salir `OK` y el brazo se pone rojo nombrando `FRONTERA` como ausente.
 
 Y el vocabulario del censo tampoco era una promesa. `no-medido`, `roto` y `cuelga` eran tres
 valores que el verificador aceptaba con un `;;` vacío —leídos y no usados— mientras el censo los
