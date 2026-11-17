@@ -52,7 +52,7 @@ NNN-<vector>/
 └── patch_secure.py     # corrección canónica + el parche ingenuo, para refutarlo
 ```
 
-Seis reglas que se comprueban, no se prometen:
+Siete reglas que se comprueban, no se prometen:
 
 1. **Determinista.** Dos corridas, el mismo resultado. Sin reloj, sin azar, sin red externa.
    Las cápsulas que necesitan un servicio levantan uno efímero en `127.0.0.1` y lo apagan
@@ -69,10 +69,16 @@ Seis reglas que se comprueban, no se prometen:
    que cierra el caso reportado y deja abierta la clase de fallo; `--naive` debe seguir
    explotando. Si esa variante también cerrara, la cápsula estaría vendiendo una refutación
    que no existe, y el verificador la marca como fallo en vez de absolverla.
+7. **El oráculo no se cree el rechazo.** Una cápsula cuyo PoC mira estado se corre también
+   contra `parche_mentiroso.py`, un sujeto que hace el daño y **después** lanza la excepción
+   declarada. `RC 0` ahí significa que el PoC vio el efecto pese a la mentira; `RC 1`
+   significa que se la creyó. Las cápsulas cuyo efecto es el valor de retorno no pueden
+   auditarse así, y lo declaran en vez de callarlo: `invariante: retorno` ·
+   `falsador: fuera-de-alcance`.
 
 ## Verificar todo
 
-Un solo comando comprueba las cinco promesas en todas las cápsulas, y es el mismo que
+Un solo comando comprueba las siete promesas en todas las cápsulas, y es el mismo que
 corre el CI en cada push — el badge de arriba es su resultado, no una promesa:
 
 ```bash
@@ -92,22 +98,37 @@ existe no es un asiento bloqueado» (010), «un servicio que no opera no pierde 
 (011)—, de modo que si dejaran de cumplirse el comando se
 pone rojo en vez de seguir contando la historia.
 
-Contra un clon en blanco, el 16-Nov-2026:
+La sexta: si el README de la cápsula declara `falsador: verifica`, el PoC se corre contra
+`parche_mentiroso.py` y debe dar **RC 0**. Un `invariante:` o un `falsador:` ausente, o con
+un valor que el verificador no conozca, es fallo; la única forma de saltarse esta prueba es
+declararlo por escrito y que el lector lo cuente como lo que es. La séptima la cierra el
+cotejo de la tabla de arriba contra los directorios que existen: una
+cápsula sin fila, o una fila sin cápsula, también se pone roja.
+
+Y una regla que el PoC cobra antes de que el gate la vea: **sin `--naive`, todas las vías
+tienen que coincidir.** Un veredicto que satisface a una sola esconde la regresión de la
+otra —la vía que se cree el rechazo quedaría certificada por lo que hizo su vecina—, así que
+el PoC sale con **RC 4** y lo nombra. Sólo el sujeto `--naive` puede mezclar, porque mezclar
+es exactamente lo que declara: cierra el caso reportado y deja abierta la clase.
+
+Contra un clon en blanco, el 17-Nov-2026:
 
 ```
-OK     001-jwt-algorithm-confusion/ (vulnerable=0 parche=1 ingenuo=0 roto=3 control=n/a)
-OK     002-ssrf-pdf-renderer/ (vulnerable=0 parche=1 ingenuo=0 roto=3 control=n/a)
-OK     003-insecure-deserialization-rce/ (vulnerable=0 parche=1 ingenuo=0 roto=3 control=n/a)
-OK     004-idor-object-authorization/ (vulnerable=0 parche=1 ingenuo=0 roto=3 control=n/a)
-OK     005-archive-path-traversal/ (vulnerable=0 parche=1 ingenuo=0 roto=3 control=n/a)
-OK     006-sql-injection-numeric-context/ (vulnerable=0 parche=1 ingenuo=0 roto=3 control=n/a)
-OK     007-cors-origin-reflection/ (vulnerable=0 parche=1 ingenuo=0 roto=3 control=n/a)
-OK     008-insecure-design-coupon-ledger/ (vulnerable=0 parche=1 ingenuo=0 roto=3 control=3)
-OK     009-truncated-hash-salt/ (vulnerable=0 parche=1 ingenuo=0 roto=3 control=3)
-OK     010-serialization-validation-asymmetry/ (vulnerable=0 parche=1 ingenuo=0 roto=3 control=3)
-OK     011-logging-fail-open/ (vulnerable=0 parche=1 ingenuo=0 roto=3 control=3)
+OK     001-jwt-algorithm-confusion/ (vulnerable=0 parche=1 ingenuo=0 roto=3 control=n/a falsador=fuera-de-alcance)
+OK     002-ssrf-pdf-renderer/ (vulnerable=0 parche=1 ingenuo=0 roto=3 control=n/a falsador=fuera-de-alcance)
+OK     003-insecure-deserialization-rce/ (vulnerable=0 parche=1 ingenuo=0 roto=3 control=n/a falsador=no-medido)
+OK     004-idor-object-authorization/ (vulnerable=0 parche=1 ingenuo=0 roto=3 control=n/a falsador=roto)
+OK     005-archive-path-traversal/ (vulnerable=0 parche=1 ingenuo=0 roto=3 control=n/a falsador=verifica)
+OK     006-sql-injection-numeric-context/ (vulnerable=0 parche=1 ingenuo=0 roto=3 control=n/a falsador=fuera-de-alcance)
+OK     007-cors-origin-reflection/ (vulnerable=0 parche=1 ingenuo=0 roto=3 control=n/a falsador=fuera-de-alcance)
+OK     008-insecure-design-coupon-ledger/ (vulnerable=0 parche=1 ingenuo=0 roto=3 control=3 falsador=fuera-de-alcance)
+OK     009-truncated-hash-salt/ (vulnerable=0 parche=1 ingenuo=0 roto=3 control=3 falsador=cuelga)
+OK     010-serialization-validation-asymmetry/ (vulnerable=0 parche=1 ingenuo=0 roto=3 control=3 falsador=verifica)
+OK     011-logging-fail-open/ (vulnerable=0 parche=1 ingenuo=0 roto=3 control=3 falsador=verifica)
 
 11/11 capsulas: ataque RC 0, parche RC 1, parche ingenuo RC 0, sujeto roto RC 3
+3/11 capsulas declaran 'falsador: verifica' y su PoC no se cree un rechazo declarado;
+el resto publica su censo en el README (fuera-de-alcance · no-medido · cuelga · roto).
 OK     tabla del README: 11 filas, 11 directorios
 ```
 
@@ -115,6 +136,57 @@ Sin cápsulas el script falla en vez de salir en verde: un cero de inventario no
 verificación. Y la tabla de arriba se coteja contra los directorios en la misma corrida:
 una cápsula sin fila deja el anuncio corto y una fila sin cápsula promete lo que no existe;
 las dos cosas fallan el comando igual que una cápsula roja.
+
+## El oráculo también se mide
+
+Un PoC que sólo mira la excepción no distingue un parche que cierra de un parche que
+**finge** cerrar. El segundo hace el daño y después lanza la excepción declarada —«entrada
+rechazada»—, y un PoC que se cree el rechazo publica `BLOQUEADO` sobre un archivo ya escrito.
+Ese verde está en la dirección peligrosa: tranquiliza al lector sobre un sujeto intacto.
+
+`parche_mentiroso.py` es ese sujeto. Primero consulta a `patch_secure` —el testigo de «esta
+entrada se rechaza»— y, si la entrada se rechaza, ejecuta igual el código vulnerable y
+después lanza la excepción declarada:
+
+```bash
+cd 010-serialization-validation-asymmetry
+python3 exploit_poc.py --app ../parche_mentiroso.py   # RC 0 = el PoC no se cree el rechazo
+```
+
+La asimetría la usa el falsificador, no el PoC: el falsificador necesita saber cuál es el
+ataque, el PoC no. Por eso el PoC sólo cambia cuando su oráculo no mira el estado.
+
+**La lectura es de dos valores, no de un porcentaje.** `RC 0` significa que el PoC detectó el
+efecto pese al rechazo declarado. `RC 1` significa que se lo creyó. Un `RC 1` con
+`[FALSADOR] rechazos fingidos=0` **no es un veredicto**: el falsificador no llegó a mentir y
+lo que se midió fue su alcance, no el oráculo.
+
+### El censo, con cinco estados
+
+Un `0` de intentos no es un cero de hallazgos. Ninguna cápsula se publica como «segura»: se
+publica el estado que la corrida permite afirmar. Cada README declara dos líneas —qué mira su
+PoC y qué dio el censo— y `./verificar-capsulas.sh` las lee:
+
+| estado | qué mide | cápsulas |
+|---|---|---|
+| `verifica` | el PoC mira el libro después del rechazo y ve el efecto igual | 005 · 010 · 011 |
+| `fuera-de-alcance` | el efecto **es** el valor de retorno que el falsificador descarta al lanzar: no hay estado que mirar, ni sano ni engañado | 001 · 002 · 006 · 007 · 008 |
+| `no-medido` | el testigo no declaró ningún rechazo que falsificar (0 fingidos) | 003 |
+| `roto` | el falsificador altera el sujeto hasta romperlo (RC 3) | 004 |
+| `cuelga` | el falsificador no termina sobre ese sujeto | 009 |
+
+El hallazgo estructural es la columna `invariante`, y es lo que hace el catálogo auditable sin
+ejecutarlo: **si el invariante de una cápsula es de retorno, un parche que miente es
+inauditable por construcción** —la mentira no deja huella— y eso no es una tarea pendiente,
+es una frontera del instrumento. Si el invariante es de **estado**, el falsificador tiene algo
+que mirar y la cápsula puede certificarse.
+
+Esa frontera se publicó de las dos direcciones. `005` y `010` estaban **engañadas** el
+16-Nov-2026: las dos tenían la comprobación de estado escrita y no la consultaban dentro del
+`except`. En `010` eran tres líneas (`frontera.asiento` y `frontera.puede` ya existían); en
+`005` el veredicto pasó a darlo el sistema de archivos y la excepción quedó como testigo. Hoy
+las tres cápsulas de estado se certifican, y el gate corre el falsificador en cada push: si
+alguien devuelve un `except` que se cree el rechazo, el comando se pone rojo.
 
 ## Trabajo sobre tu servicio
 

@@ -1,5 +1,8 @@
 # 006 · Inyección SQL en un contexto numérico
 
+invariante: retorno
+falsador: fuera-de-alcance
+
 Un buscador de cuentas por `id`. El id es un entero, así que nadie lo entrecomilla — para qué,
 si un entero no lleva comillas. Esa frase, que suena a razón, es el fallo entero: el valor se
 concatena crudo en el `WHERE`, y una columna entera acepta texto si ese texto es SQL.

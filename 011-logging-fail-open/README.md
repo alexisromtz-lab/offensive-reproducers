@@ -1,5 +1,8 @@
 # 011 · El registro pierde justo el evento que importa, y la vigilancia lo da por registrado
 
+invariante: estado
+falsador: verifica
+
 Una caja mueve dinero y tiene que dejar rastro de cada movimiento. El sumidero del registro falla,
 el fallo se absorbe **después** de asentar el efecto, y el panel del propio sistema cuenta las
 llamadas al registro en vez de los asientos que el sumidero conserva. El cliente no manipula nada:

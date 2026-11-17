@@ -1,5 +1,8 @@
 # 008 · Cupón de un solo uso que nunca cuenta sus usos
 
+invariante: retorno
+falsador: fuera-de-alcance
+
 Un comercio declara su cupón de bienvenida **de un solo uso por cuenta**. El catálogo lo
 dice; el servicio resuelve el cupón, aplica el porcentaje y devuelve el importe a cobrar.
 Nadie cuenta los usos, y cualquier importe es un importe.

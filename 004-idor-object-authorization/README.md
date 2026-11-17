@@ -1,5 +1,8 @@
 # 004 · autorización a nivel de objeto (IDOR)
 
+invariante: estado
+falsador: roto
+
 **Hipótesis.** Un servicio puede autenticar correctamente y aun así no autorizar nada. Si el
 código resuelve la sesión y después devuelve el objeto que la ruta nombra, el identificador se
 convierte en la credencial: quien lo conozca, entra.

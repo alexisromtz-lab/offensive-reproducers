@@ -44,10 +44,42 @@ for capsula in [0-9][0-9][0-9]-*/; do
   done
   [ "$hay_control" = si ] || controles=3
 
-  if [ "$vulnerable" -eq 0 ] && [ "$parche" -eq 1 ] && [ "$ingenuo" -eq 0 ] && [ "$roto" -eq 3 ] && [ "$controles" -eq 3 ]; then
-    echo "OK     $capsula (vulnerable=0 parche=1 ingenuo=0 roto=3 control=$([ "$hay_control" = si ] && echo 3 || echo n/a))"
+  # Quinto modo, declarado por capsula: si el README dice `falsador: verifica`, el PoC
+  # afirma que no se cree un rechazo declarado --que mira el libro despues de la
+  # excepcion-- y aqui tiene su lector. Un RC 0 significa que detecto el efecto pese al
+  # rechazo; un RC 1 significa que se lo creyo. Los otros valores son el censo publicado
+  # (fuera-de-alcance, no-medido, cuelga, roto) y no se ejecutan: 009 no termina y 004
+  # rompe el sujeto. Sin lector esa afirmacion seria prosa y nadie la refutaria.
+  invariante=$(sed -n 's/^invariante: *//p' "$capsula"README.md 2>/dev/null | head -1)
+  falsador_declarado=$(sed -n 's/^falsador: *//p' "$capsula"README.md 2>/dev/null | head -1)
+  censo_ok=si
+  censo="$falsador_declarado"
+  case "$invariante" in
+    estado|retorno) ;;
+    *) echo "FALLA  $capsula sin declarar 'invariante: estado|retorno'"; censo_ok=no ;;
+  esac
+  case "$falsador_declarado" in
+    verifica)
+      (cd "$capsula" && python3 exploit_poc.py --app ../parche_mentiroso.py >/dev/null 2>&1)
+      rc_falsador=$?
+      if [ "$rc_falsador" -ne 0 ]; then
+        if [ "$rc_falsador" -eq 4 ]; then
+          echo "FALLA  $capsula falsador: RC 4, una via se cree el rechazo aunque su vecina lo vea"
+        else
+          echo "FALLA  $capsula falsador: RC $rc_falsador, el PoC se cree el rechazo declarado"
+        fi
+        censo_ok=no
+      fi
+      ;;
+    fuera-de-alcance|no-medido|cuelga|roto) ;;
+    *) echo "FALLA  $capsula falsador: valor no reconocido '$falsador_declarado'"; censo_ok=no ;;
+  esac
+  [ "$censo_ok" = si ] || censo=no
+
+  if [ "$vulnerable" -eq 0 ] && [ "$parche" -eq 1 ] && [ "$ingenuo" -eq 0 ] && [ "$roto" -eq 3 ] && [ "$controles" -eq 3 ] && [ "$censo_ok" = si ]; then
+    echo "OK     $capsula (vulnerable=0 parche=1 ingenuo=0 roto=3 control=$([ "$hay_control" = si ] && echo 3 || echo n/a) falsador=$censo)"
   else
-    echo "FALLA  $capsula (vulnerable=$vulnerable parche=$parche ingenuo=$ingenuo roto=$roto control=$controles)"
+    echo "FALLA  $capsula (vulnerable=$vulnerable parche=$parche ingenuo=$ingenuo roto=$roto control=$controles falsador=$censo)"
     fallos=$((fallos + 1))
   fi
 done
@@ -60,6 +92,9 @@ fi
 
 echo ""
 echo "$((total - fallos))/$total capsulas: ataque RC 0, parche RC 1, parche ingenuo RC 0, sujeto roto RC 3"
+verifican=$(grep -l '^falsador: verifica' [0-9][0-9][0-9]-*/README.md 2>/dev/null | wc -l | tr -d ' ')
+echo "$verifican/$total capsulas declaran 'falsador: verifica' y su PoC no se cree un rechazo declarado;"
+echo "el resto publica su censo en el README (fuera-de-alcance · no-medido · cuelga · roto)."
 
 # La tabla del README y los directorios divergen en silencio: una capsula nueva sin
 # fila deja el anuncio corto, y una fila sin directorio promete lo que no existe.
