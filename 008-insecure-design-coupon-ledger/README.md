@@ -80,9 +80,9 @@ cupón.
 | `patch_secure.py` | BLOQUEADA | BLOQUEADA | BLOQUEADA | concedido | **1** |
 
 ```bash
-python3 exploit_poc.py                                  # 0  el sujeto cae
-python3 exploit_poc.py --app patch_secure.py --naive    # 0  el ingenuo también
-python3 exploit_poc.py --app patch_secure.py            # 1  el canónico aguanta
+python3 exploit_poc.py                                  # RC 0 · el sujeto cae
+python3 exploit_poc.py --app patch_secure.py --naive    # RC 0 · el ingenuo también
+python3 exploit_poc.py --app patch_secure.py            # RC 1 · el canónico aguanta
 ```
 
 El control corre dentro de la misma corrida, con dos cuentas nuevas: si el sujeto niega

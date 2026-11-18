@@ -4,9 +4,10 @@ vocabulario|OK     --self-test: 'no-medido' con fingidos>0, 'roto' con RC 0, 'cu
 tiempo|OK     --self-test: 'reloj: AHORA' ignorado -> RC 1 nombrando RELOJ; el mismo campo con un veredicto que cambia -> RC 0
 alcance|OK     --self-test: PoC que escapa por 'tempfile' y '~' -> RC 1 nombrando FRONTERA; el mismo PoC sin escapar -> RC 0
 entorno|OK     --self-test: 'tempfile' y '~' bajo con_limite y reloj_en_jaula -> 0 archivo(s) fuera de su casa; el mismo PoC sin jaula -> 2
-censo|OK     --self-test: censo de 12 brazos cotejado por nombre; sin 'entorno' -> RC 1 nombrandolo; con el censo entero -> RC 0
+censo|OK     --self-test: censo de 13 brazos cotejado por nombre; sin 'entorno' -> RC 1 nombrandolo; con el censo entero -> RC 0
 conducta|OK     --self-test: conducta cotejada contra la base; sin la linea de un brazo -> RC 1 nombrandolo; con la base entera -> RC 0
 admision|OK     --self-test: sin README, 'invariante:' duplicado y sin PoC -> RC 1 nombrando SIN_README, CAMPO_DUPLICADO y SIN_POC; una sana junto a una rechazada -> RC 1 con '1/1' en el denominador
 publicado|OK     --self-test: bloque, censo en prosa y contrato cotejados contra la corrida real; cada asercion mutilada -> RC 1/1/1 nombrandola; el README real -> RC 0
 marcas|OK     --self-test: indice, censo y contrato son el mismo conjunto de brazos; sin una fila -> RC 1 nombrandola, ordinal repetido -> RC 1, marca sin contrato -> RC 1
-contrato|OK     --self-test: registro y censo con 12 filas cotejados; sin una fila -> RC 1 nombrandolo, la linea que pierde su token verde -> RC 1, el marcador que el codigo no imprime -> RC 1
+reproduccion|OK     --self-test: el bloque Reproducir publicado y el medido son el mismo; RC cambiado -> RC 1, cerca ausente -> RC 1, RC sin numero -> RC 1; en el bucle, la capsula que miente -> RC 1 y la sana -> RC 0
+contrato|OK     --self-test: registro y censo con 13 filas cotejados; sin una fila -> RC 1 nombrandolo, la linea que pierde su token verde -> RC 1, el marcador que el codigo no imprime -> RC 1

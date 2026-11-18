@@ -61,9 +61,9 @@ transformación que deshacer, y la consulta legítima sigue devolviendo lo suyo.
 | `patch_secure.py` | BLOQUEADA | BLOQUEADA | intacta | **1** |
 
 ```bash
-python3 exploit_poc.py                                  # 0  el sujeto cae
-python3 exploit_poc.py --app patch_secure.py --naive    # 0  el ingenuo también
-python3 exploit_poc.py --app patch_secure.py            # 1  el canónico aguanta
+python3 exploit_poc.py                                  # RC 0 · el sujeto cae
+python3 exploit_poc.py --app patch_secure.py --naive    # RC 0 · el ingenuo también
+python3 exploit_poc.py --app patch_secure.py            # RC 1 · el canónico aguanta
 ```
 
 El código `3` existe para el cierre por rotura: un sujeto que bloquea las dos vías porque dejó de

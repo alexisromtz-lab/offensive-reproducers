@@ -124,8 +124,8 @@ Un solo comando comprueba las once promesas en todas las cápsulas, y es el mism
 corre el CI en cada push — el badge de arriba es su resultado, no una promesa:
 
 ```bash
-./verificar-capsulas.sh             # las once reglas sobre todas las cápsulas, más la admisión, el censo, la tabla, lo publicado, el contrato y el índice
-./verificar-capsulas.sh --self-test # la pareja, la frontera, su alcance, el entorno, el vocabulario, el reloj, el censo, la conducta, la admisión, lo publicado, el contrato y el índice: de los doce se falsan a sí mismos
+./verificar-capsulas.sh             # las once reglas sobre todas las cápsulas, más la admisión, el censo, la tabla, lo publicado, el contrato, el índice y la reproducción que cada cápsula publica
+./verificar-capsulas.sh --self-test # la pareja, la frontera, su alcance, el entorno, el vocabulario, el reloj, el censo, la conducta, la admisión, lo publicado, el contrato, el índice y la reproducción: de los trece se falsan a sí mismos
 ./verificar-capsulas.sh --escribir-base # único escritor de brazos.esperado: reescribe la base de conducta, y el contrato la coteja en el mismo acto
 ```
 
@@ -246,6 +246,24 @@ nombrando la marca huérfana —medido en copias del árbol: con el cierre son *
 promesas; los ordinales de la cabecera del script siguen siendo prosa histórica y no se reescriben
 —cambiar el pasado no es medir—, y el cotejo de ordinales ve repetición y hueco, no una marca que
 cambió de nombre. Cuesta 0,1 s, sin red y sin jaula.
+
+La reproducción publicada —la marca 13, y la primera cuyo sujeto es **el producto** y no el
+instrumento— nace de un defecto medido el 17-Nov-2026: cada cápsula publica en su propio README un
+bloque «Reproducir» con los tres comandos y el RC que espera de cada uno, y ese bloque no tenía
+lector en ningún push. Medido en las doce cápsulas: **36 cifras de RC escritas a mano y cero
+comparaciones**, en dos dialectos —cinco publicaban el número con la palabra `RC` y siete sin
+ella—, de modo que editar una cápsula sin tocar su README dejaba al repositorio publicando una
+respuesta que ya no medía, con el badge en verde. Ahora el bucle principal pasa a
+`cotejar_reproduccion` los tres RC que acaba de medir, y el lector los coteja contra lo que la
+cápsula publica aparejando por texto exacto —`python3 exploit_poc.py` es prefijo de los otros dos,
+y un apareo por prefijo haría que la línea del ataque respondiera por las tres—: nombra la cápsula
+sin bloque cercado con los tres comandos, la que publica dos respuestas para la misma cápsula, la
+que deja un comando sin `RC` en su comentario y la que publica un `RC` distinto del medido. No
+lanza un subproceso dentro del bucle —el README ya está en la mano—, así que cuesta cero corridas
+extra: 0,1 s para el brazo que se falsifica a sí mismo en tres direcciones. Alcance declarado: mide
+el `RC` que la cápsula **dice** que produce, no que el efecto narrado sea el que ocurre —eso lo
+mide la corrida, que es de donde salen los tres números—; y un brazo vaciado por dentro que
+conserve su línea publicada sigue pasando, que es el límite que esta marca no cierra.
 
 Y una regla que el PoC cobra antes de que el gate la vea: **sin `--naive`, todas las vías
 tienen que coincidir.** Un veredicto que satisface a una sola esconde la regresión de la

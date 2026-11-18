@@ -98,9 +98,9 @@ instalar. Una cápsula que necesita una biblioteca opcional no es autocontenida.
 | sujeto que niega todo | BLOQUEADA — 0/2 en 240 000 sondas | CABE (deducción) | **NO** | **3** |
 
 ```bash
-python3 exploit_poc.py                                  # 0  abre 1 de 2 cuentas
-python3 exploit_poc.py --app patch_secure.py --naive    # 0  abre 2 de 2
-python3 exploit_poc.py --app patch_secure.py            # 1  no cabe en el presupuesto
+python3 exploit_poc.py                                  # RC 0 · abre 1 de 2 cuentas
+python3 exploit_poc.py --app patch_secure.py --naive    # RC 0 · abre 2 de 2
+python3 exploit_poc.py --app patch_secure.py            # RC 1 · no cabe en el presupuesto
 ```
 
 El control corre dentro de la misma corrida: si el sujeto no admite ni la clave real de una
