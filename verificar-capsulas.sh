@@ -80,6 +80,19 @@
 # al texto, no a la ejecucion --un brazo vaciado por dentro que conserve la linea que publica su
 # token pasa--; verlo exige un lector de conducta por brazo que este instrumento no tiene.
 # Coste medido: 0,1 s, sin red y sin jaula.
+#
+# El indice de las marcas, el 17-Nov-2026: las anteriores dejaron tres numeraciones vivas y
+# ninguna era un registro. Medido en este artefacto: esta cabecera usa «La novena» dos veces
+# --la marca y su correccion-- y cierra con «las trece anteriores» sin que existan trece
+# ordinales distintos; el README llama «la decimotercera marca» a lo publicado y «la undecima
+# marca» al contrato, dos ejes en dos parrafos seguidos; y el censo declara brazos, no marcas.
+# Un lector no podia saber cuantas marcas cubre el instrumento ni cual cierra cada brazo, asi
+# que cada acto nuevo renumeraba por el eje que recordaba. Ahora `marcas.esperado` es el indice
+# --una fila por marca con el brazo que la falsifica-- y el duodecimo brazo lo coteja contra el
+# censo, contra `contrato.esperado` y contra su propia progresion: un brazo sin marca, una marca
+# sin brazo, un ordinal repetido y un hueco se nombran, y el cierre lo aplica a los registros en
+# vigor. Los ordinales de esta cabecera siguen siendo prosa historica y se declaran como tales:
+# numeran promesas, no marcas, y reescribirlos seria cambiar el pasado. Coste medido: 0,1 s.
 set -u
 
 # `falsador: cuelga` no deja codigo de salida, asi que su unica medida posible es un reloj.
@@ -197,7 +210,7 @@ PY
 # el archivo `brazos.esperado` guarda la base fechada contra la que se coteja. Un cambio de
 # conducta legitimo cambia la linea, y quien lo hace la reescribe con `--escribir-base` en el
 # mismo acto: el cambio queda en el diff, que es donde un humano lo lee.
-CENSO_BRAZOS="pareja frontera vocabulario tiempo alcance entorno censo conducta admision publicado contrato"
+CENSO_BRAZOS="pareja frontera vocabulario tiempo alcance entorno censo conducta admision publicado contrato marcas"
 
 # Coteja lo ejercido contra lo declarado, dos listas de nombres separados por espacio. Publica
 # cada diferencia con nombre propio y devuelve RC 1 si hay alguna. Es puro a proposito: recibe
@@ -422,6 +435,71 @@ for brazo, verde, rojo in filas:
     if rojo not in rojos:
         print("FALLA  --self-test contrato: el marcador de '%s' no lo imprime el codigo: '%s'" % (brazo, rojo))
         rc = 1
+raise SystemExit(rc)
+PY
+}
+
+# Coteja el indice de las marcas contra los otros dos registros. Es la respuesta a un defecto
+# medido el 17-Nov-2026 en este artefacto: la cabecera ordinala dos veces la misma marca y el
+# README numeraba dos parrafos seguidos con ejes distintos, porque ninguna de las tres
+# numeraciones era un objeto que un lector pudiera cotejar --y reescribirlas seria cambiar el
+# pasado--. `marcas.esperado` lo es: una fila por marca con el brazo que la falsifica. Cuatro
+# aserciones, cada una con su nombre: el indice y el censo son el mismo conjunto de brazos, los
+# ordinales son exactamente 1..N en el orden del archivo --anadir una marca la appendiza, y
+# renumerar se ve en el diff--, el indice no repite un brazo, y el indice y `contrato.esperado`
+# son el mismo conjunto --un brazo con marca y sin certificado es una marca sin falsificador, y
+# al reves--. Devuelve RC 1 y nombra la fila. Es puro: recibe tres rutas y el censo y no invoca
+# el gate, para que el duodecimo brazo lo falsifique sin recursion.
+cotejar_marcas() {
+  python3 - "$1" "$2" "$3" <<'PY'
+import sys
+
+def lineas(ruta):
+    with open(ruta, encoding="utf-8") as f:
+        return f.read().splitlines()
+
+registro, contrato, censo = sys.argv[1], sys.argv[2], sys.argv[3].split()
+
+filas = []
+for n, linea in enumerate(lineas(registro), 1):
+    if not linea.strip() or linea.lstrip().startswith("#"):
+        continue
+    campos = [c.strip() for c in linea.split("\t")]
+    if len(campos) != 3 or not all(campos):
+        print("FALLA  --self-test marcas: la fila %d del indice no tiene tres campos con valor" % n)
+        raise SystemExit(1)
+    filas.append(campos)
+
+brazos = [brazo for _, brazo, _ in filas]
+contratados = set()
+for linea in lineas(contrato):
+    if linea.strip() and not linea.lstrip().startswith("#"):
+        contratados.add(linea.split("\t")[0].strip())
+
+rc = 0
+if len(set(brazos)) != len(brazos):
+    print("FALLA  --self-test marcas: el indice repite un brazo; una marca por brazo")
+    rc = 1
+for nombre in sorted(set(censo) - set(brazos)):
+    print("FALLA  --self-test marcas: el brazo '%s' no tiene fila en marcas.esperado" % nombre)
+    rc = 1
+for nombre in sorted(set(brazos) - set(censo)):
+    print("FALLA  --self-test marcas: el indice declara '%s', que el censo no ejerce" % nombre)
+    rc = 1
+ordinales = [int(o) if o.isdigit() else -1 for o, _, _ in filas]
+if -1 in ordinales:
+    print("FALLA  --self-test marcas: hay una marca cuyo ordinal no es un numero")
+    rc = 1
+elif ordinales != list(range(1, len(filas) + 1)):
+    print("FALLA  --self-test marcas: los ordinales no son 1..%d en el orden del archivo: %s"
+          % (len(filas), ", ".join(str(o) for o in ordinales)))
+    rc = 1
+for nombre in sorted(set(brazos) - contratados):
+    print("FALLA  --self-test marcas: el brazo '%s' tiene marca y no tiene fila de contrato" % nombre)
+    rc = 1
+for nombre in sorted(contratados - set(brazos)):
+    print("FALLA  --self-test marcas: el brazo '%s' tiene fila de contrato y no tiene marca" % nombre)
+    rc = 1
 raise SystemExit(rc)
 PY
 }
@@ -1000,6 +1078,67 @@ open(sys.argv[2],"w",encoding="utf-8").write(re.sub(r"(\w+)( (?:reglas|promesas)
   publicar_brazo publicado "OK     --self-test: bloque, censo en prosa y contrato cotejados contra la corrida real; cada asercion mutilada -> RC $rc_bloque/$rc_brazos/$rc_reglas nombrandola; el README real -> RC $rc_sano"
   brazos_ok="$brazos_ok publicado"
 
+  # Duodecimo brazo: el indice de las marcas. Mide el registro de lo que los otros once cubren
+  # --y hasta hoy ese registro eran tres numeraciones en prosa--, y se falsifica en tres
+  # direcciones: indice al que le falta un brazo, ordinal repetido que rompe la progresion, y
+  # brazo con marca y sin fila de contrato; el indice real va como control positivo y va primero,
+  # porque un lector que acusa al indice correcto no mide nada y sus tres rojos serian
+  # indistinguibles de un lector roto. Corre antes del undecimo y no despues: el control positivo
+  # del contrato coteja el registro entero contra la conducta viva, y una fila sin linea
+  # publicada --la suya propia, si corriera despues-- lo acusaria por construccion.
+  salida_msano=$(cotejar_marcas "$origen/marcas.esperado" "$origen/contrato.esperado" "$CENSO_BRAZOS")
+  rc_msano=$?
+  nom_msano=$(printf '%s\n' "$salida_msano" | grep -c 'FALLA')
+  if [ "$rc_msano" -ne 0 ] || [ "$nom_msano" -ne 0 ]; then
+    echo "FALLA  --self-test: el indice acuso al registro real (RC $rc_msano, $nom_msano lineas FALLA)"
+    printf '%s\n' "$salida_msano" | sed 's/^/       /'
+    return 1
+  fi
+  jaula_marcas=$(mktemp -d "${TMPDIR:-/tmp}/marcas.XXXXXX") || return 1
+  trap 'rm -f "$CONDUCTA_FICHERO"; rm -rf "${jaula_marcas:-}"' EXIT
+  python3 - "$origen/marcas.esperado" "$origen/contrato.esperado" "$jaula_marcas" <<'PY' || return 1
+import sys
+
+indice, contrato, destino = sys.argv[1], sys.argv[2], sys.argv[3]
+filas = open(indice, encoding="utf-8").read().splitlines()
+reglas = open(contrato, encoding="utf-8").read().splitlines()
+
+def escribir(nombre, lineas):
+    with open("%s/%s" % (destino, nombre), "w", encoding="utf-8") as f:
+        f.write("\n".join(lineas) + "\n")
+
+escribir("sin-marca", [l for l in filas
+                       if l.startswith("#") or not l.strip() or l.split("\t")[1] != "tiempo"])
+escribir("ordinal-repetido", [l.replace("8\tconducta", "7\tconducta", 1) if l.startswith("8\t") else l
+                              for l in filas])
+escribir("sin-contrato", [l for l in reglas if not l.startswith("contrato\t")])
+PY
+  salida_mfalta=$(cotejar_marcas "$jaula_marcas/sin-marca" "$origen/contrato.esperado" "$CENSO_BRAZOS")
+  rc_mfalta=$?
+  nom_mfalta=$(printf '%s\n' "$salida_mfalta" | grep -c "no tiene fila en marcas.esperado")
+  salida_mordinal=$(cotejar_marcas "$jaula_marcas/ordinal-repetido" "$origen/contrato.esperado" "$CENSO_BRAZOS")
+  rc_mordinal=$?
+  nom_mordinal=$(printf '%s\n' "$salida_mordinal" | grep -c "no son 1")
+  salida_mcontrato=$(cotejar_marcas "$origen/marcas.esperado" "$jaula_marcas/sin-contrato" "$CENSO_BRAZOS")
+  rc_mcontrato=$?
+  nom_mcontrato=$(printf '%s\n' "$salida_mcontrato" | grep -c "no tiene fila de contrato")
+  rm -rf "$jaula_marcas"
+
+  if [ "$rc_mfalta" -eq 0 ] || [ "$nom_mfalta" -eq 0 ]; then
+    echo "FALLA  --self-test: el indice no cazo al brazo sin marca (RC $rc_mfalta, nombrado $nom_mfalta veces)"
+    return 1
+  fi
+  if [ "$rc_mordinal" -eq 0 ] || [ "$nom_mordinal" -eq 0 ]; then
+    echo "FALLA  --self-test: el indice no cazo el ordinal repetido (RC $rc_mordinal, nombrado $nom_mordinal veces)"
+    return 1
+  fi
+  if [ "$rc_mcontrato" -eq 0 ] || [ "$nom_mcontrato" -eq 0 ]; then
+    echo "FALLA  --self-test: el indice no cazo la marca sin fila de contrato (RC $rc_mcontrato, nombrado $nom_mcontrato veces)"
+    return 1
+  fi
+  publicar_brazo marcas "OK     --self-test: indice, censo y contrato son el mismo conjunto de brazos; sin una fila -> RC $rc_mfalta nombrandola, ordinal repetido -> RC $rc_mordinal, marca sin contrato -> RC $rc_mcontrato"
+  brazos_ok="$brazos_ok marcas"
+
   # Undecimo brazo: el contrato de la base. Corre despues del decimo y antes del cotejo final
   # porque mide el certificado que los otros diez firman, y aqui se falsifica en cuatro
   # direcciones: registro al que le falta un brazo, linea publicada que pierde su token verde,
@@ -1111,6 +1250,22 @@ PY
     return 1
   fi
   echo "OK     --self-test: contrato de los $N_CENSO brazos cotejado contra contrato.esperado y contra el codigo"
+
+  # El indice se aplica a los registros en vigor, tambien fuera de todo brazo: si el duodecimo
+  # desaparece del codigo no ejecuta su propio apunte y el silencio seria su unica huella. Puesto
+  # aqui, un brazo nuevo sin fila de indice se nombra aunque nadie escriba el brazo que lo mira.
+  if [ ! -f "$origen/marcas.esperado" ]; then
+    echo "FALLA  --self-test: falta el indice de las marcas marcas.esperado"
+    return 2
+  fi
+  salida_final_marcas=$(cotejar_marcas "$origen/marcas.esperado" "$origen/contrato.esperado" "$CENSO_BRAZOS")
+  rc_final_marcas=$?
+  if [ "$rc_final_marcas" -ne 0 ]; then
+    printf '%s\n' "$salida_final_marcas"
+    echo "PISTA  --self-test: si nacio una marca, anade su fila en marcas.esperado y su token en contrato.esperado en el mismo acto"
+    return 1
+  fi
+  echo "OK     --self-test: indice de las marcas cotejado contra el censo y contra contrato.esperado"
   return 0
 }
 

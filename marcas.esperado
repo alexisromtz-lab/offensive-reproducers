@@ -1,0 +1,30 @@
+# El indice de las marcas: una fila por marca, en el orden en que nacio.
+#
+# Formato: ordinal<TAB>brazo<TAB>defecto que la marca cierra.
+#
+# Unico escritor: un humano, a mano, en el mismo acto en que anade el brazo. Nunca lo
+# reescribe `--escribir-base`: esa base es la conducta publicada, este indice es lo que el
+# instrumento dice cubrir. Son sujetos distintos y por eso tienen lectores distintos.
+#
+# Protocolo para anadir la marca numero N: se anade la fila aqui, el nombre en
+# `CENSO_BRAZOS`, la fila del token y el marcador en `contrato.esperado`, y el brazo en
+# `self_test()`. El cierre coteja los tres registros entre si, asi que los cuatro cambios
+# son uno solo o ninguno. Renumerar es cambiar el indice: se ve en el diff.
+#
+# Tres numeraciones vivian en el repo y solo esta es un indice. La cabecera del script numera
+# por promesas --«La decimocuarta»-- y sigue siendo prosa historica: reescribirla seria cambiar
+# el pasado, no medir. El README numeraba por actos de forma inconsistente --«la decimotercera
+# marca» y «la undecima marca» para los dos ultimos-- y desde este acto cita este indice. Esta
+# columna numera por marcas, que es lo que un lector puede cotejar contra el censo.
+1	pareja	`invariante:` y `falsador:` dichos dos veces sin que nadie los coteje
+2	frontera	`fuera-de-alcance` afirmado sin una jaula que mida lo que el PoC toca
+3	vocabulario	etiquetas del censo que pasaban por un `;;` vacio mientras se publicaban como datos
+4	tiempo	el instante sin lector: una capsula que declara `reloj:` y nadie mueve el reloj
+5	alcance	la foto de residuo no alcanzaba donde el sujeto escribe por defecto
+6	entorno	tres puertas de ejecucion y solo una con el entorno pinzado
+7	censo	brazos falsados sin censo por nombre: borrar uno no dejaba huella
+8	conducta	un brazo vaciado por dentro conservaba su nombre y su apunte
+9	admision	lo mal formado entraba con una causa que no era la suya, o entraba
+10	publicado	el README publicando cifras que ningun lector recomparaba en cada push
+11	contrato	la base de conducta bendiciendose a si misma con `--escribir-base`
+12	marcas	tres numeraciones vivas y ningun indice de las marcas que el instrumento cubre

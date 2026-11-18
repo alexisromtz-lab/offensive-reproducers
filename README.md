@@ -124,8 +124,8 @@ Un solo comando comprueba las once promesas en todas las cápsulas, y es el mism
 corre el CI en cada push — el badge de arriba es su resultado, no una promesa:
 
 ```bash
-./verificar-capsulas.sh             # las once reglas sobre todas las cápsulas, más la admisión, el censo, la tabla, lo publicado y el contrato
-./verificar-capsulas.sh --self-test # la pareja, la frontera, su alcance, el entorno, el vocabulario, el reloj, el censo, la conducta, la admisión, lo publicado y el contrato: de los once se falsan a sí mismos
+./verificar-capsulas.sh             # las once reglas sobre todas las cápsulas, más la admisión, el censo, la tabla, lo publicado, el contrato y el índice
+./verificar-capsulas.sh --self-test # la pareja, la frontera, su alcance, el entorno, el vocabulario, el reloj, el censo, la conducta, la admisión, lo publicado, el contrato y el índice: de los doce se falsan a sí mismos
 ./verificar-capsulas.sh --escribir-base # único escritor de brazos.esperado: reescribe la base de conducta, y el contrato la coteja en el mismo acto
 ```
 
@@ -185,7 +185,7 @@ sumaba en `fallos`, que resta de un total donde nunca entró, y la única admiti
 mutación que rechaza *toda* cápsula no la caza este brazo —sin admitidas no hay población que
 medir—, la caza el primero, que publica que la pareja no se cazó.
 
-Lo publicado —la decimotercera marca, y la primera que no mide ni el alcance de un lector ni
+Lo publicado —la marca 10 del índice, y la primera que no mide ni el alcance de un lector ni
 qué población entró, sino **lo que este repo anuncia**— nace de un defecto medido el
 17-Nov-2026: el README publica cifras en tres sitios —el bloque vallado de abajo, la prosa
 que anunciaba cuántos brazos se falsaban y el recuento del contrato— y sólo el bloque tenía
@@ -209,7 +209,7 @@ direcciones: el README real tiene que dar **RC 0 y cero líneas `FALLA`** —con
 primero—, y cada una de las tres aserciones mutilada por separado tiene que dar rojo
 nombrando su marcador propio.
 
-El contrato de la base —la undécima marca, y la primera que no mide lo que el gate comprueba
+El contrato de la base —la marca 11 del índice, y la primera que no mide lo que el gate comprueba
 ni lo que el repo anuncia, sino **el certificado que el repo se firma a sí mismo**— nace de
 otro defecto medido el 17-Nov-2026: `brazos.esperado` guarda la línea que cada brazo publica y
 su único escritor es `--escribir-base`, sin ninguna compuerta sobre el contenido. En una copia
@@ -226,6 +226,26 @@ que mide —bendecirla devuelve **RC 1** nombrando el brazo y el token perdido�
 declarado: ata el certificado al **texto**, no a la ejecución; un brazo vaciado por dentro que
 conserve la línea que publica su token pasa, y verlo exigiría un lector de conducta por brazo
 que este instrumento no tiene. Cuesta 0,1 s, sin red y sin jaula.
+
+El índice de las marcas —la marca 12, y la primera que no mide ni lo que el gate comprueba, ni lo
+que el repo anuncia, ni el certificado que se firma, sino **el registro de lo que el instrumento
+cubre**— nace de otro defecto medido el 17-Nov-2026: las marcas existían sólo como historia en
+`git log` y como prosa en tres numeraciones vivas que nadie cotejaba. La cabecera del script llama
+«La novena» a dos marcas distintas y cierra afirmando «las trece anteriores» sin que existan trece
+ordinales; este README numeraba dos párrafos seguidos con dos ejes —lo publicado era «la
+decimotercera» y el contrato «la undécima», hasta este acto—; y el censo declara brazos, no marcas,
+así que un lector no podía saber cuántas marcas cubre el instrumento ni cuál cierra cada brazo: cada
+acto nuevo renumeraba por el eje que recordaba. Ahora `marcas.esperado` es el índice —una fila por
+marca, con el brazo que la falsifica y el defecto que cierra— y el duodécimo brazo lo falsifica en
+tres direcciones más su control positivo: un índice al que le falta un brazo, un ordinal repetido
+que rompe la progresión, y un brazo con marca y sin fila de contrato. Pero el brazo sólo falsifica
+**la función**: el cierre aplica el mismo cotejo a **el índice en vigor**, fuera de todo brazo, así
+que retirar el brazo y su nombre del censo sin retirar la fila del índice devuelve **RC 1**
+nombrando la marca huérfana —medido en copias del árbol: con el cierre son **RC 1** y sin él
+**RC 0**, que es el falso verde que esta marca cierra—. Alcance declarado: numera **actos**, no
+promesas; los ordinales de la cabecera del script siguen siendo prosa histórica y no se reescriben
+—cambiar el pasado no es medir—, y el cotejo de ordinales ve repetición y hueco, no una marca que
+cambió de nombre. Cuesta 0,1 s, sin red y sin jaula.
 
 Y una regla que el PoC cobra antes de que el gate la vea: **sin `--naive`, todas las vías
 tienen que coincidir.** Un veredicto que satisface a una sola esconde la regresión de la
