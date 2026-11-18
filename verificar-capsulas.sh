@@ -66,6 +66,20 @@
 # contiene: cuantos brazos se falsan y cuantas reglas promete el contrato. Ahora las tres tienen
 # lector en cada push, y el sujeto de la primera es la corrida entera --no un resumen de ella--
 # por eso el decimo brazo corre el gate real en vez de copiar el arbol. Coste medido: 18,4 s.
+#
+# La decimocuarta, el contrato de la base, el 17-Nov-2026: las trece anteriores miden el alcance
+# de un lector sobre lo admitido, que poblacion entro o lo que el repo anuncia. Ninguna media el
+# certificado que el repo se firma a si mismo. `brazos.esperado` guarda la linea que cada brazo
+# publica y `--escribir-base` es su unico escritor, sin contrato sobre el contenido: medido en
+# una copia del arbol, un brazo degradado a «OK --self-test: hecho» fue bendecido y la corrida
+# salio RC 0 con «conducta de 10 brazos identica». La base certificaba estabilidad, no fuerza: un
+# brazo podia dejar de publicar la cifra de lo que mide y seguir contando como sano. Ahora cada
+# fila de `contrato.esperado` declara el token que su linea verde tiene que publicar y el marcador
+# que su FALLA tiene que imprimir; el undecimo brazo coteja los dos y `--escribir-base` ya no
+# puede bendecir una linea que los pierda. Su limite, declarado: el contrato ata el certificado
+# al texto, no a la ejecucion --un brazo vaciado por dentro que conserve la linea que publica su
+# token pasa--; verlo exige un lector de conducta por brazo que este instrumento no tiene.
+# Coste medido: 0,1 s, sin red y sin jaula.
 set -u
 
 # `falsador: cuelga` no deja codigo de salida, asi que su unica medida posible es un reloj.
@@ -183,7 +197,7 @@ PY
 # el archivo `brazos.esperado` guarda la base fechada contra la que se coteja. Un cambio de
 # conducta legitimo cambia la linea, y quien lo hace la reescribe con `--escribir-base` en el
 # mismo acto: el cambio queda en el diff, que es donde un humano lo lee.
-CENSO_BRAZOS="pareja frontera vocabulario tiempo alcance entorno censo conducta admision publicado"
+CENSO_BRAZOS="pareja frontera vocabulario tiempo alcance entorno censo conducta admision publicado contrato"
 
 # Coteja lo ejercido contra lo declarado, dos listas de nombres separados por espacio. Publica
 # cada diferencia con nombre propio y devuelve RC 1 si hay alguna. Es puro a proposito: recibe
@@ -345,6 +359,69 @@ for palabra, valor in anunciadas:
               % (palabra, valor, enumeradas))
         rc = 1
 
+raise SystemExit(rc)
+PY
+}
+
+# Coteja el certificado que el repo se firma a si mismo: una fila por brazo en
+# `contrato.esperado` con el token que su linea verde tiene que publicar y el marcador que su
+# FALLA tiene que imprimir. Medido el 17-Nov-2026 en una copia del arbol: sin este contrato,
+# `--escribir-base` bendecia un brazo degradado a «OK --self-test: hecho» y la corrida salia
+# RC 0 con «conducta de 10 brazos identica» --la base certificaba estabilidad, no fuerza--.
+# Tres aserciones, cada una con su nombre: el registro y el censo son el mismo conjunto, el
+# token verde esta en la linea publicada por ese brazo, y el marcador rojo lo imprime una FALLA
+# del codigo. Devuelve RC 1 y nombra la fila. Es puro --recibe tres rutas y el censo y no invoca
+# el gate-- para que el undecimo brazo lo falsifique sin recursion.
+cotejar_contrato() {
+  python3 - "$1" "$2" "$3" "$4" <<'PY'
+import sys
+
+def lineas(ruta):
+    with open(ruta, encoding="utf-8") as f:
+        return f.read().splitlines()
+
+registro, base, codigo = sys.argv[1], sys.argv[2], sys.argv[3]
+censo = sys.argv[4].split()
+
+filas = []
+for n, linea in enumerate(lineas(registro), 1):
+    if not linea.strip() or linea.lstrip().startswith("#"):
+        continue
+    campos = [c.strip() for c in linea.split("\t")]
+    if len(campos) != 3 or not all(campos):
+        print("FALLA  --self-test contrato: la fila %d del registro no tiene tres campos con valor" % n)
+        raise SystemExit(1)
+    filas.append(campos)
+
+verdes = {brazo: verde for brazo, verde, _ in filas}
+publicado = {}
+for linea in lineas(base):
+    if linea.strip():
+        nombre, _, texto = linea.partition("|")
+        publicado[nombre.strip()] = texto
+rojos = "\n".join(l for l in lineas(codigo) if "FALLA" in l)
+
+rc = 0
+if len(verdes) != len(filas):
+    print("FALLA  --self-test contrato: el registro repite un brazo; una fila por brazo")
+    rc = 1
+for nombre in sorted(set(censo) - set(verdes)):
+    print("FALLA  --self-test contrato: el brazo '%s' no tiene fila en contrato.esperado" % nombre)
+    rc = 1
+for nombre in sorted(set(verdes) - set(censo)):
+    print("FALLA  --self-test contrato: el registro declara '%s', que el censo no ejerce" % nombre)
+    rc = 1
+for brazo, verde, rojo in filas:
+    if brazo not in publicado:
+        print("FALLA  --self-test contrato: el brazo '%s' no publica linea que cotejar" % brazo)
+        rc = 1
+    elif verde not in publicado[brazo]:
+        print("FALLA  --self-test contrato: la linea de '%s' ya no publica '%s'" % (brazo, verde))
+        print("  linea: %s" % publicado[brazo])
+        rc = 1
+    if rojo not in rojos:
+        print("FALLA  --self-test contrato: el marcador de '%s' no lo imprime el codigo: '%s'" % (brazo, rojo))
+        rc = 1
 raise SystemExit(rc)
 PY
 }
@@ -923,6 +1000,70 @@ open(sys.argv[2],"w",encoding="utf-8").write(re.sub(r"(\w+)( (?:reglas|promesas)
   publicar_brazo publicado "OK     --self-test: bloque, censo en prosa y contrato cotejados contra la corrida real; cada asercion mutilada -> RC $rc_bloque/$rc_brazos/$rc_reglas nombrandola; el README real -> RC $rc_sano"
   brazos_ok="$brazos_ok publicado"
 
+  # Undecimo brazo: el contrato de la base. Corre despues del decimo y antes del cotejo final
+  # porque mide el certificado que los otros diez firman, y aqui se falsifica en cuatro
+  # direcciones: registro al que le falta un brazo, linea publicada que pierde su token verde,
+  # marcador rojo que el codigo no imprime, y el registro real como control positivo --primero,
+  # porque un lector que acusa al registro correcto no mide nada y sus tres rojos serian
+  # indistinguibles de un lector roto--.
+  jaula_contrato=$(mktemp -d "${TMPDIR:-/tmp}/contrato.XXXXXX") || return 1
+  trap 'rm -f "$CONDUCTA_FICHERO"; rm -rf "${jaula_contrato:-}"' EXIT
+  python3 - "$origen/contrato.esperado" "$origen/brazos.esperado" "$jaula_contrato" <<'PY' || return 1
+import sys
+
+registro, base, destino = sys.argv[1], sys.argv[2], sys.argv[3]
+reg = open(registro, encoding="utf-8").read().splitlines()
+bas = open(base, encoding="utf-8").read().splitlines()
+
+def escribir(nombre, lineas):
+    with open("%s/%s" % (destino, nombre), "w", encoding="utf-8") as f:
+        f.write("\n".join(lineas) + "\n")
+
+escribir("sin-fila", [l for l in reg if not l.startswith("tiempo\t")])
+escribir("sin-token", [l.replace("PAREJA", "el marcador") if l.startswith("pareja|") else l for l in bas])
+escribir("rojo-falso", ["\t".join(l.split("\t")[:2] + ["MARCADOR-QUE-EL-CODIGO-NO-IMPRIME"])
+                        if l.startswith("pareja\t") else l for l in reg])
+PY
+  codigo_contrato="$origen/verificar-capsulas.sh"
+  salida_cfila=$(cotejar_contrato "$jaula_contrato/sin-fila" "$origen/brazos.esperado" "$codigo_contrato" "$CENSO_BRAZOS")
+  rc_cfila=$?
+  nom_cfila=$(printf '%s\n' "$salida_cfila" | grep -c "no tiene fila en contrato.esperado")
+  salida_ctoken=$(cotejar_contrato "$origen/contrato.esperado" "$jaula_contrato/sin-token" "$codigo_contrato" "$CENSO_BRAZOS")
+  rc_ctoken=$?
+  nom_ctoken=$(printf '%s\n' "$salida_ctoken" | grep -c "ya no publica")
+  salida_crojo=$(cotejar_contrato "$jaula_contrato/rojo-falso" "$origen/brazos.esperado" "$codigo_contrato" "$CENSO_BRAZOS")
+  rc_crojo=$?
+  nom_crojo=$(printf '%s\n' "$salida_crojo" | grep -c "no lo imprime el codigo")
+  rm -rf "$jaula_contrato"
+
+  if [ "$rc_cfila" -eq 0 ] || [ "$nom_cfila" -eq 0 ]; then
+    echo "FALLA  --self-test: el contrato no cazo al brazo sin fila (RC $rc_cfila, nombrado $nom_cfila veces)"
+    return 1
+  fi
+  if [ "$rc_ctoken" -eq 0 ] || [ "$nom_ctoken" -eq 0 ]; then
+    echo "FALLA  --self-test: el contrato no cazo la linea sin su token verde (RC $rc_ctoken, nombrado $nom_ctoken veces)"
+    return 1
+  fi
+  if [ "$rc_crojo" -eq 0 ] || [ "$nom_crojo" -eq 0 ]; then
+    echo "FALLA  --self-test: el contrato no cazo el marcador que el codigo no imprime (RC $rc_crojo, nombrado $nom_crojo veces)"
+    return 1
+  fi
+  publicar_brazo contrato "OK     --self-test: registro y censo con $N_CENSO filas cotejados; sin una fila -> RC $rc_cfila nombrandolo, la linea que pierde su token verde -> RC $rc_ctoken, el marcador que el codigo no imprime -> RC $rc_crojo"
+  brazos_ok="$brazos_ok contrato"
+
+  # El control positivo va despues de publicar: el registro describe tambien la linea de este
+  # brazo, y esa linea no existe hasta que el brazo la publica. Se coteja contra la conducta
+  # viva --un registro que acusa a lo que los brazos acaban de decir no mide nada--; contra la
+  # base en vigor lo coteja el cierre, que es otro sujeto: el certificado, no la conducta.
+  salida_csano=$(cotejar_contrato "$origen/contrato.esperado" "$CONDUCTA_FICHERO" "$codigo_contrato" "$CENSO_BRAZOS")
+  rc_csano=$?
+  nom_csano=$(printf '%s\n' "$salida_csano" | grep -c 'FALLA')
+  if [ "$rc_csano" -ne 0 ] || [ "$nom_csano" -ne 0 ]; then
+    echo "FALLA  --self-test: el contrato acuso a la conducta real (RC $rc_csano, $nom_csano lineas FALLA)"
+    printf '%s\n' "$salida_csano" | sed 's/^/       /'
+    return 1
+  fi
+
   # Cotejo final, incondicional y fuera del septimo y del octavo brazo: si un brazo desaparece
   # del codigo no ejecuta su propio apunte, y el silencio es su unica huella. Puesto aqui,
   # borrar el septimo tampoco borra su lector --el cotejo sigue viendo que falta `censo`--, y
@@ -953,6 +1094,23 @@ open(sys.argv[2],"w",encoding="utf-8").write(re.sub(r"(\w+)( (?:reglas|promesas)
     fi
     echo "OK     --self-test: conducta de $N_CENSO brazos identica a brazos.esperado"
   fi
+
+  # El contrato se aplica a la base en vigor --tambien a la que acaba de escribir
+  # `--escribir-base`-- y vive fuera de todo brazo: un brazo borrado no puede llevarse su lector.
+  # Es la puerta que cierra la auto-bendicion: el unico escritor de la base ya no puede bendecir
+  # una linea que pierda el token de lo que el brazo mide.
+  if [ ! -f "$origen/contrato.esperado" ]; then
+    echo "FALLA  --self-test: falta el registro de contrato contrato.esperado"
+    return 2
+  fi
+  salida_final_contrato=$(cotejar_contrato "$origen/contrato.esperado" "$base_brazos" "$origen/verificar-capsulas.sh" "$CENSO_BRAZOS")
+  rc_final_contrato=$?
+  if [ "$rc_final_contrato" -ne 0 ]; then
+    printf '%s\n' "$salida_final_contrato"
+    echo "PISTA  --self-test: si un brazo cambio lo que mide, actualiza su fila en contrato.esperado en el mismo acto"
+    return 1
+  fi
+  echo "OK     --self-test: contrato de los $N_CENSO brazos cotejado contra contrato.esperado y contra el codigo"
   return 0
 }
 
