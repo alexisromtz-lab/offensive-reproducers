@@ -124,8 +124,8 @@ Un solo comando comprueba las once promesas en todas las cápsulas, y es el mism
 corre el CI en cada push — el badge de arriba es su resultado, no una promesa:
 
 ```bash
-./verificar-capsulas.sh             # las once reglas sobre todas las cápsulas, más la admisión, el censo y la tabla
-./verificar-capsulas.sh --self-test # la pareja, la frontera, su alcance, el entorno, el vocabulario, el reloj, el censo, la conducta y la admisión de los nueve se falsan a sí mismos
+./verificar-capsulas.sh             # las once reglas sobre todas las cápsulas, más la admisión, el censo, la tabla y lo publicado
+./verificar-capsulas.sh --self-test # la pareja, la frontera, su alcance, el entorno, el vocabulario, el reloj, el censo, la conducta, la admisión y lo publicado: de los diez se falsan a sí mismos
 ./verificar-capsulas.sh --escribir-base # único escritor de brazos.esperado: reescribe la base de conducta
 ```
 
@@ -184,6 +184,30 @@ sumaba en `fallos`, que resta de un total donde nunca entró, y la única admiti
 `0/1` en verde—, y es la mutación que queda como control negativo. Límite declarado: la
 mutación que rechaza *toda* cápsula no la caza este brazo —sin admitidas no hay población que
 medir—, la caza el primero, que publica que la pareja no se cazó.
+
+Lo publicado —la decimotercera marca, y la primera que no mide ni el alcance de un lector ni
+qué población entró, sino **lo que este repo anuncia**— nace de un defecto medido el
+17-Nov-2026: el README publica cifras en tres sitios —el bloque vallado de abajo, la prosa
+que anunciaba cuántos brazos se falsaban y el recuento del contrato— y sólo el bloque tenía
+lector, y sólo cuando un acto se acordaba de mirarlo. Un brazo nuevo en el script dejaba la
+prosa publicando un número que ya no medía nada, y el CI seguía verde porque el CI corre el
+gate, no lo que el gate publica. Ahora el décimo brazo corre el gate real sobre este árbol y
+lo coteja con el README real en tres aserciones independientes, cada una con su nombre: el
+bloque de salida se compara línea a línea y la primera que diverge se nombra con su número;
+la cifra de brazos de la prosa se convierte de palabra a número y se coteja contra el censo
+del script; y las reglas enumeradas en el contrato se cuentan y se cotejan contra **todas**
+las apariciones de «*N* reglas» y «*N* promesas». Cuesta 18,4 s medidos —el gate corre
+entero dentro del gate, 22 s de CI que pasan a 43— y por eso corre en cada push y no en cada
+uso. Alcance declarado: coteja **cifras**, no la prosa que las rodea, y no distingue una
+afirmación de una cita —por eso esta misma prosa no reproduce los patrones que el lector
+mide—; no comprueba que cada
+regla del contrato esté implementada —eso lo mide el brazo o la cápsula que la ejerce—; y las
+narrativas fechadas («seis brazos se falsaban») y los segundos del `--self-test` quedan
+fuera a propósito, porque cotejarlos obligaría a reescribir el pasado cada vez que nace un
+brazo y a medir el ruido del procesador como si fuera del sujeto. Su falsador tiene cuatro
+direcciones: el README real tiene que dar **RC 0 y cero líneas `FALLA`** —control positivo,
+primero—, y cada una de las tres aserciones mutilada por separado tiene que dar rojo
+nombrando su marcador propio.
 
 Y una regla que el PoC cobra antes de que el gate la vea: **sin `--naive`, todas las vías
 tienen que coincidir.** Un veredicto que satisface a una sola esconde la regresión de la

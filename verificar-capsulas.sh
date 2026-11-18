@@ -57,6 +57,15 @@
 # denominador que el censo publica. Ahora la admision es una funcion con causa nombrada y la
 # poblacion se escribe una sola vez: lo no admitido no entra al censo, y las fracciones se
 # cuentan sobre esa lista y no sobre un segundo glob que puede discrepar de la primera.
+#
+# La decimotercera, lo publicado, el 17-Nov-2026: las doce anteriores miden lo que el gate
+# comprueba; ninguna media lo que el repo anuncia. El bloque de resultados del README se habia
+# cotejado a mano una vez --en el acto de la admision-- y ningun lector lo comparaba en cada
+# push: editar una fraccion del script sin tocar el bloque dejaba el CI en verde con el
+# escaparate publicando una cifra que ya no media. Lo mismo con las dos cifras que el bloque no
+# contiene: cuantos brazos se falsan y cuantas reglas promete el contrato. Ahora las tres tienen
+# lector en cada push, y el sujeto de la primera es la corrida entera --no un resumen de ella--
+# por eso el decimo brazo corre el gate real en vez de copiar el arbol. Coste medido: 18,4 s.
 set -u
 
 # `falsador: cuelga` no deja codigo de salida, asi que su unica medida posible es un reloj.
@@ -174,7 +183,7 @@ PY
 # el archivo `brazos.esperado` guarda la base fechada contra la que se coteja. Un cambio de
 # conducta legitimo cambia la linea, y quien lo hace la reescribe con `--escribir-base` en el
 # mismo acto: el cambio queda en el diff, que es donde un humano lo lee.
-CENSO_BRAZOS="pareja frontera vocabulario tiempo alcance entorno censo conducta admision"
+CENSO_BRAZOS="pareja frontera vocabulario tiempo alcance entorno censo conducta admision publicado"
 
 # Coteja lo ejercido contra lo declarado, dos listas de nombres separados por espacio. Publica
 # cada diferencia con nombre propio y devuelve RC 1 si hay alguna. Es puro a proposito: recibe
@@ -237,6 +246,105 @@ for nombre in sorted(esperado):
 for nombre in sorted(set(medido) - set(esperado)):
     print("FALLA  --self-test conducta: el brazo '%s' publico linea sin base" % nombre)
     rc = 1
+raise SystemExit(rc)
+PY
+}
+
+# Coteja lo que el repo publica contra lo que el gate mide, en tres aserciones que no comparten
+# lector: el bloque de resultados del README contra la corrida entera, la cifra de brazos que el
+# comando documentado declara contra el censo, y las reglas que el README anuncia contra las que
+# su contrato enumera. Las tres son la misma clase de defecto --una cifra publicada que nadie
+# vuelve a comparar-- y ninguna se puede deducir de las otras dos: el bloque no dice cuantos
+# brazos son, y el censo no dice cuantas reglas promete el contrato. Devuelve RC 1 si alguna
+# falla y nombra la asercion y la linea, para que el rojo diga donde mirar y no solo que algo
+# cambio. Es puro: recibe tres rutas y no invoca el gate, para que el decimo brazo lo falsue sin
+# recursion. Fuera de alcance declarado: las menciones narrativas de brazos --«seis brazos se
+# falsaban», «igual de cierta con siete brazos»--, que son historia fechada y obligarian a
+# reescribir el pasado cada vez que nace un brazo, y los segundos del `--self-test`, que son una
+# medida del host y no del sujeto.
+cotejar_publicado() {
+  python3 - "$1" "$2" "$3" <<'PY'
+import re
+import sys
+
+NUM = {
+    "uno": 1, "una": 1, "dos": 2, "tres": 3, "cuatro": 4, "cinco": 5, "seis": 6,
+    "siete": 7, "ocho": 8, "nueve": 9, "diez": 10, "once": 11, "doce": 12,
+    "trece": 13, "catorce": 14, "quince": 15, "diecinueve": 19,
+}
+
+readme, publicada, brazos = sys.argv[1], sys.argv[2], sys.argv[3]
+with open(readme, encoding="utf-8") as f:
+    lineas = f.read().splitlines()
+with open(publicada, encoding="utf-8") as f:
+    real = f.read().splitlines()
+texto = "\n".join(lineas)
+declarados = len(brazos.split())
+rc = 0
+
+# Primera: el bloque de resultados. Se ancla por su contenido --la linea del recuento de
+# capsulas-- y no por su posicion, para que anadir un bloque de comandos arriba no la mueva.
+vallas = [i for i, l in enumerate(lineas) if l.strip().startswith("```")]
+bloque = None
+for abre, cierra in zip(vallas, vallas[1:]):
+    if any("capsulas: ataque RC 0" in l for l in lineas[abre + 1:cierra]):
+        bloque = lineas[abre + 1:cierra]
+        break
+if bloque is None:
+    print("FALLA  publicado: el README no publica bloque de resultados (ninguna valla contiene 'capsulas: ataque RC 0')")
+    rc = 1
+elif bloque != real:
+    rc = 1
+    print("FALLA  publicado: el bloque del README no es la corrida real (%d lineas publicadas, %d medidas)"
+          % (len(bloque), len(real)))
+    for i in range(max(len(bloque), len(real))):
+        izq = bloque[i] if i < len(bloque) else "<sin linea>"
+        der = real[i] if i < len(real) else "<sin linea>"
+        if izq != der:
+            print("  linea %d del bloque:" % (i + 1))
+            print("    README:  %s" % izq)
+            print("    corrida: %s" % der)
+            break
+
+# Segunda: cuantos brazos se falsan. El comando documentado lo afirma en prosa y el censo lo
+# declara en `CENSO_BRAZOS`; si discrepan, uno de los dos miente. Mide apariciones, no
+# afirmaciones: una cita literal del patron cuenta igual que una promesa, y por eso el README
+# no lo reproduce en su prosa.
+vivas = re.findall(r"de los (\w+) se falsan", texto)
+if not vivas:
+    print("FALLA  publicado: el README no declara cuantos brazos se falsan ('de los <n> se falsan')")
+    rc = 1
+for palabra in vivas:
+    valor = NUM.get(palabra.lower())
+    if valor is None:
+        print("FALLA  publicado: la cifra de brazos '%s' no es un numero que este lector conozca" % palabra)
+        rc = 1
+    elif valor != declarados:
+        print("FALLA  publicado: el README dice que se falsan '%s' (%d) y el censo declara %d"
+              % (palabra, valor, declarados))
+        rc = 1
+
+# Tercera: cuantas reglas promete el contrato. La prosa las anuncia y la propia seccion las
+# enumera; se cotejan las dos. Lo que esto no mide --que cada regla este implementada-- lo mide
+# el brazo o la capsula que la ejerce, no un recuento.
+try:
+    ini = next(i for i, l in enumerate(lineas) if l.startswith("## Contrato de cada"))
+except StopIteration:
+    print("FALLA  publicado: el README no tiene la seccion '## Contrato de cada'")
+    raise SystemExit(1)
+fin = next((i for i in range(ini + 1, len(lineas)) if lineas[i].startswith("## ")), len(lineas))
+enumeradas = sum(1 for l in lineas[ini + 1:fin] if re.match(r"^\d+\.\s+\*\*", l))
+anunciadas = [(p, NUM[p.lower()]) for p in re.findall(r"(\w+) (?:reglas|promesas)", texto)
+              if p.lower() in NUM]
+if not anunciadas:
+    print("FALLA  publicado: el README no anuncia cuantas reglas promete ('<n> reglas|promesas')")
+    rc = 1
+for palabra, valor in anunciadas:
+    if valor != enumeradas:
+        print("FALLA  publicado: el README anuncia '%s' (%d) y su contrato enumera %d reglas"
+              % (palabra, valor, enumeradas))
+        rc = 1
+
 raise SystemExit(rc)
 PY
 }
@@ -304,7 +412,7 @@ self_test() {
   brazos_ok=""
   CONDUCTA_FICHERO=$(mktemp "${TMPDIR:-/tmp}/conducta.XXXXXX") || return 1
   trap 'rm -f "$CONDUCTA_FICHERO"' EXIT
-  n_brazos=$(printf '%s\n' $CENSO_BRAZOS | wc -w | tr -d ' ')
+  N_CENSO=$(printf '%s\n' $CENSO_BRAZOS | wc -w | tr -d ' ')
   capsula=$(cd "$origen" && ls -d [0-9][0-9][0-9]-*/ 2>/dev/null | while read -r c; do
     if grep -q '^falsador: verifica' "$c"README.md 2>/dev/null; then echo "$c"; break; fi
   done)
@@ -631,7 +739,7 @@ POC
     echo "FALLA  --self-test: el censo acuso al conjunto completo (RC $rc_censo_sano)"
     return 1
   fi
-  publicar_brazo censo "OK     --self-test: censo de $n_brazos brazos cotejado por nombre; sin 'entorno' -> RC $rc_censo nombrandolo; con el censo entero -> RC 0"
+  publicar_brazo censo "OK     --self-test: censo de $N_CENSO brazos cotejado por nombre; sin 'entorno' -> RC $rc_censo nombrandolo; con el censo entero -> RC 0"
   brazos_ok="$brazos_ok censo"
 
   # Octavo brazo, la conducta de los brazos: el septimo coteja nombres, y un brazo vaciado por
@@ -735,6 +843,86 @@ POC
   publicar_brazo admision "OK     --self-test: sin README, 'invariante:' duplicado y sin PoC -> RC $rc_admision nombrando SIN_README, CAMPO_DUPLICADO y SIN_POC; una sana junto a una rechazada -> RC $rc_poblacion con '1/1' en el denominador"
   brazos_ok="$brazos_ok admision"
 
+  # Decimo brazo, lo publicado: las nueve anteriores miden lo que el gate comprueba, y ninguna
+  # media lo que el repo anuncia. Medido el 17-Nov-2026: el bloque de resultados del README se
+  # habia cotejado a mano una vez y ningun lector lo comparaba en cada push, asi que editar una
+  # fraccion del script sin tocar el bloque dejaba el CI en verde con el escaparate publicando
+  # una cifra que ya no media. El sujeto de ese cotejo es la corrida entera --no un resumen de
+  # ella--, y por eso se corre el gate sobre el arbol real en vez de copiarlo: una copia del
+  # arbol mide la copia. Coste medido ese dia: 18,4 s de corrida completa, que es lo que cuesta
+  # que la cifra publicada tenga lector.
+  #
+  # Se falsa en las cuatro direcciones que el lector tiene --el README real tiene que callar, y
+  # cada una de las tres aserciones mutilada por separado tiene que ser nombrada--, porque una
+  # asercion sin falsador es exactamente la promesa que este brazo existe para no publicar.
+  # Fuera de alcance declarado: las menciones narrativas de brazos («Seis brazos se falsaban»,
+  # «igual de cierta con siete brazos») y los segundos del `--self-test`. Son historia fechada y
+  # una medida del host; cotejarlas obligaria a reescribir el pasado cada vez que nace un brazo.
+  #
+  # Y una mordida propia, el mismo 17-Nov-2026: el primer borrador llamo `n_brazos` a su cuenta
+  # de lineas nombradas y piso la variable que el cierre publica, con lo que el gate salio verde
+  # anunciando «1 brazos ejercidos» sobre un censo de 10. La cifra no tenia lector; ahora se
+  # llama `N_CENSO` y ningun brazo la toca.
+  publicada=$(mktemp "${TMPDIR:-/tmp}/publicada.XXXXXX") || return 1
+  copia_readme=$(mktemp "${TMPDIR:-/tmp}/readme.XXXXXX") || return 1
+  trap 'rm -f "$CONDUCTA_FICHERO" "${publicada:-}" "${copia_readme:-}"' EXIT
+
+  (cd "$origen" && sh ./verificar-capsulas.sh >"$publicada" 2>&1)
+  rc_corrida_publicada=$?
+  if [ "$rc_corrida_publicada" -ne 0 ]; then
+    echo "FALLA  --self-test: la corrida real no sale en verde (RC $rc_corrida_publicada) y el bloque no se puede cotejar"
+    return 1
+  fi
+
+  cp "$origen/README.md" "$copia_readme" || return 1
+  salida_sana=$(cotejar_publicado "$copia_readme" "$publicada" "$CENSO_BRAZOS")
+  rc_sano=$?
+  nom_sano=$(printf '%s\n' "$salida_sana" | grep -c '^FALLA')
+
+  python3 -c 'import re,sys
+t=open(sys.argv[1],encoding="utf-8").read()
+open(sys.argv[2],"w",encoding="utf-8").write(re.sub(r"(?m)^(\d+/\d+ capsulas:)",lambda m:"1"+m.group(1),t,count=1))' "$origen/README.md" "$copia_readme" || return 1
+  salida_bloque=$(cotejar_publicado "$copia_readme" "$publicada" "$CENSO_BRAZOS")
+  rc_bloque=$?
+  nom_bloque=$(printf '%s\n' "$salida_bloque" | grep -c 'el bloque del README no es la corrida real')
+
+  python3 -c 'import re,sys
+t=open(sys.argv[1],encoding="utf-8").read()
+open(sys.argv[2],"w",encoding="utf-8").write(re.sub(r"(de los )\w+( se falsan)",r"\1diecinueve\2",t,count=1))' "$origen/README.md" "$copia_readme" || return 1
+  salida_brazos=$(cotejar_publicado "$copia_readme" "$publicada" "$CENSO_BRAZOS")
+  rc_brazos=$?
+  nom_brazos=$(printf '%s\n' "$salida_brazos" | grep -c 'y el censo declara')
+
+  python3 -c 'import re,sys
+t=open(sys.argv[1],encoding="utf-8").read()
+open(sys.argv[2],"w",encoding="utf-8").write(re.sub(r"(\w+)( (?:reglas|promesas))",r"quince\2",t,count=1))' "$origen/README.md" "$copia_readme" || return 1
+  salida_reglas=$(cotejar_publicado "$copia_readme" "$publicada" "$CENSO_BRAZOS")
+  rc_reglas=$?
+  nom_reglas=$(printf '%s\n' "$salida_reglas" | grep -c 'y su contrato enumera')
+  rm -f "$publicada" "$copia_readme"
+
+  # El control positivo va primero: un lector que acusa al README correcto no mide nada, y sus
+  # tres rojos de abajo serian indistinguibles de un lector roto.
+  if [ "$rc_sano" -ne 0 ] || [ "$nom_sano" -ne 0 ]; then
+    echo "FALLA  --self-test: lo publicado acuso al README real (RC $rc_sano, $nom_sano lineas FALLA)"
+    printf '%s\n' "$salida_sana" | sed 's/^/       /'
+    return 1
+  fi
+  if [ "$rc_bloque" -eq 0 ] || [ "$nom_bloque" -eq 0 ]; then
+    echo "FALLA  --self-test: lo publicado no mordio el bloque mutilado (RC $rc_bloque, nombrado $nom_bloque veces)"
+    return 1
+  fi
+  if [ "$rc_brazos" -eq 0 ] || [ "$nom_brazos" -eq 0 ]; then
+    echo "FALLA  --self-test: lo publicado no mordio la cifra de brazos mutilada (RC $rc_brazos, nombrada $nom_brazos veces)"
+    return 1
+  fi
+  if [ "$rc_reglas" -eq 0 ] || [ "$nom_reglas" -eq 0 ]; then
+    echo "FALLA  --self-test: lo publicado no mordio el recuento del contrato mutilado (RC $rc_reglas, nombrado $nom_reglas veces)"
+    return 1
+  fi
+  publicar_brazo publicado "OK     --self-test: bloque, censo en prosa y contrato cotejados contra la corrida real; cada asercion mutilada -> RC $rc_bloque/$rc_brazos/$rc_reglas nombrandola; el README real -> RC $rc_sano"
+  brazos_ok="$brazos_ok publicado"
+
   # Cotejo final, incondicional y fuera del septimo y del octavo brazo: si un brazo desaparece
   # del codigo no ejecuta su propio apunte, y el silencio es su unica huella. Puesto aqui,
   # borrar el septimo tampoco borra su lector --el cotejo sigue viendo que falta `censo`--, y
@@ -745,7 +933,7 @@ POC
     printf '%s\n' "$salida_final"
     return 1
   fi
-  echo "OK     --self-test: $n_brazos brazos ejercidos, todos declarados en el censo"
+  echo "OK     --self-test: $N_CENSO brazos ejercidos, todos declarados en el censo"
 
   base_brazos="$origen/brazos.esperado"
   if [ "${REESCRIBIR_BASE:-0}" = 1 ]; then
@@ -763,7 +951,7 @@ POC
       echo "PISTA  --self-test: si el cambio de conducta es deliberado, reescribe la base con --escribir-base"
       return 1
     fi
-    echo "OK     --self-test: conducta de $n_brazos brazos identica a brazos.esperado"
+    echo "OK     --self-test: conducta de $N_CENSO brazos identica a brazos.esperado"
   fi
   return 0
 }
