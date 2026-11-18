@@ -47,6 +47,16 @@
 # hora, y aqui se mueve el instante por donde el sujeto ya pregunta: si el veredicto no
 # cambia, el campo decoraba. Medido el 17-Nov-2026 en la primera corrida: el fixture de 001
 # caduca.
+#
+# La decimosegunda, la admision, el 17-Nov-2026: las once anteriores miden el alcance de un
+# lector sobre lo ya admitido; ninguna media que se admitio. Medido con tres directorios de
+# sonda: uno sin README salia nombrado con dos causas que no eran la suya --TIPO y `falsador:`
+# no reconocido, para un archivo que no existe--; uno con `invariante:` dos veces salia OK
+# llevando la contradiccion dentro, porque `head -1` lee la primera y la segunda es prosa; y uno
+# sin `exploit_poc.py` se acusaba de «creerse el rechazo declarado». Los tres contaban en el
+# denominador que el censo publica. Ahora la admision es una funcion con causa nombrada y la
+# poblacion se escribe una sola vez: lo no admitido no entra al censo, y las fracciones se
+# cuentan sobre esa lista y no sobre un segundo glob que puede discrepar de la primera.
 set -u
 
 # `falsador: cuelga` no deja codigo de salida, asi que su unica medida posible es un reloj.
@@ -164,7 +174,7 @@ PY
 # el archivo `brazos.esperado` guarda la base fechada contra la que se coteja. Un cambio de
 # conducta legitimo cambia la linea, y quien lo hace la reescribe con `--escribir-base` en el
 # mismo acto: el cambio queda en el diff, que es donde un humano lo lee.
-CENSO_BRAZOS="pareja frontera vocabulario tiempo alcance entorno censo conducta"
+CENSO_BRAZOS="pareja frontera vocabulario tiempo alcance entorno censo conducta admision"
 
 # Coteja lo ejercido contra lo declarado, dos listas de nombres separados por espacio. Publica
 # cada diferencia con nombre propio y devuelve RC 1 si hay alguna. Es puro a proposito: recibe
@@ -229,6 +239,59 @@ for nombre in sorted(set(medido) - set(esperado)):
     rc = 1
 raise SystemExit(rc)
 PY
+}
+
+# La puerta de entrada. Hasta el 17-Nov-2026 el gate certificaba que lo bien formado explota y
+# cierra, y nunca habia falsado que lo mal formado se rechace nombrando su causa: medido con tres
+# directorios de sonda, ninguno de los tres defectos salia nombrado y los tres sumaban al censo.
+# Publica el defecto y devuelve RC propio --0 admitida, 40 sin README, 41 campo duplicado, 42
+# campo ausente, 43 sin PoC, 44 sin parche-- para que el noveno brazo pueda falsarlos sin correr
+# el gate entero por cada uno.
+admitir_capsula() {
+  _cap=$1
+  if [ ! -f "$_cap/README.md" ]; then
+    echo "SIN_README: no existe ${_cap%/}/README.md, asi que no hay declaracion que leer"
+    return 40
+  fi
+  for _campo in invariante falsador; do
+    _n=$(grep -c "^$_campo:" "$_cap/README.md" 2>/dev/null)
+    _n=${_n:-0}
+    if [ "$_n" -eq 0 ]; then
+      echo "SIN_DECLARACION: '$_campo:' no aparece en ${_cap%/}/README.md"
+      return 42
+    fi
+    if [ "$_n" -gt 1 ]; then
+      _valores=$(sed -n "s/^$_campo: *//p" "$_cap/README.md" | tr '\n' ' ')
+      echo "CAMPO_DUPLICADO: '$_campo:' aparece $_n veces en ${_cap%/}/README.md (${_valores% }); solo la primera tendria lector"
+      return 41
+    fi
+  done
+  if [ ! -f "$_cap/exploit_poc.py" ]; then
+    echo "SIN_POC: falta ${_cap%/}/exploit_poc.py, asi que no hay ataque que medir"
+    return 43
+  fi
+  if [ ! -f "$_cap/patch_secure.py" ]; then
+    echo "SIN_PARCHE: falta ${_cap%/}/patch_secure.py, asi que el RC 1 del parche no seria suyo"
+    return 44
+  fi
+  return 0
+}
+
+# Cuenta sobre la poblacion admitida --la lista que escribe el bucle-- y no sobre un segundo
+# glob del disco. Hasta el 17-Nov-2026 cada fraccion del censo releia `[0-9][0-9][0-9]-*/`, asi
+# que dos lecturas del mismo arbol podian discrepar: medido, un directorio no admitido inflaba
+# el denominador y uno con `invariante:` duplicado sumaba en dos columnas de la misma corrida.
+contar_declaracion() {
+  _lista=$1
+  _patron=$2
+  _n=0
+  while IFS= read -r _c; do
+    [ -n "$_c" ] || continue
+    if grep -q "$_patron" "$_c/README.md" 2>/dev/null; then
+      _n=$((_n + 1))
+    fi
+  done < "$_lista"
+  printf '%s' "$_n"
 }
 
 # Sin esta prueba el cotejo seria otra marca sin lector: nadie sabria si sigue mirando. Se
@@ -598,6 +661,80 @@ POC
   publicar_brazo conducta "OK     --self-test: conducta cotejada contra la base; sin la linea de un brazo -> RC $rc_conducta nombrandolo; con la base entera -> RC 0"
   brazos_ok="$brazos_ok conducta"
 
+  # Noveno brazo, la admision: las ocho anteriores miden el alcance de un lector sobre lo ya
+  # admitido, y ninguna media que se admitio. Se falsa en las dos direcciones --tres defectos
+  # tienen que salir nombrados, y una pareja de una sana mas una rechazada tiene que certificar
+  # la sana sin que la rechazada infle ni reste el denominador-- porque una admision que mueva la
+  # cifra pareceria segura. Limite medido el 17-Nov-2026: la mutacion que rechaza TODA capsula no
+  # la muerde este brazo --sin admitidas no hay poblacion que medir--, la muerde el primero, que
+  # publica que la pareja no se cazo. Lo que este brazo falsa es la direccion que los otros pueden
+  # dejar pasar: el rechazo que se cuela en el denominador.
+  jaula=$(mktemp -d "${TMPDIR:-/tmp}/admision.XXXXXX") || return 1
+  cp "$origen/verificar-capsulas.sh" "$origen/sujeto_roto.py" "$origen/parche_mentiroso.py" "$origen/inyector_reloj.py" "$jaula/" || return 1
+  printf '| 901 | prueba | A00:2021 |\n| 902 | prueba | A00:2021 |\n| 903 | prueba | A00:2021 |\n' >"$jaula/README.md" || return 1
+  mkdir "$jaula/901-x" "$jaula/902-x" "$jaula/903-x" || return 1
+  cat >"$jaula/901-x/exploit_poc.py" <<'POC'
+import sys
+sys.exit(0)
+POC
+  cp "$jaula/901-x/exploit_poc.py" "$jaula/902-x/exploit_poc.py"
+  : >"$jaula/901-x/patch_secure.py"
+  : >"$jaula/902-x/patch_secure.py"
+  : >"$jaula/903-x/patch_secure.py"
+  # El campo duplicado no es redundancia: declara `estado` y `retorno` a la vez, y `verifica`
+  # contradice al segundo. Con `head -1` esa capsula salia OK con la contradiccion dentro.
+  printf 'invariante: estado\ninvariante: retorno\nfalsador: verifica\n' >"$jaula/902-x/README.md" || return 1
+  printf 'invariante: estado\nfalsador: verifica\n' >"$jaula/903-x/README.md" || return 1
+
+  salida=$(cd "$jaula" && sh ./verificar-capsulas.sh 2>&1)
+  rc_admision=$?
+  n_sin_readme=$(printf '%s\n' "$salida" | grep -c 'SIN_README')
+  n_duplicado=$(printf '%s\n' "$salida" | grep -c 'CAMPO_DUPLICADO')
+  n_sin_poc=$(printf '%s\n' "$salida" | grep -c 'SIN_POC')
+  n_rechazadas=$(printf '%s\n' "$salida" | grep -c 'no admitidos: no cuentan en el denominador')
+  rm -rf "$jaula"
+
+  # Y la direccion que impide el siempre-rojo: una sana junto a una rechazada. La tabla anuncia
+  # solo la sana, que es lo que la poblacion admite.
+  jaula=$(mktemp -d "${TMPDIR:-/tmp}/admision-pob.XXXXXX") || return 1
+  cp "$origen/verificar-capsulas.sh" "$origen/sujeto_roto.py" "$origen/parche_mentiroso.py" "$origen/inyector_reloj.py" "$jaula/" || return 1
+  printf '| 904 | prueba | A00:2021 |\n' >"$jaula/README.md" || return 1
+  mkdir "$jaula/901-x" "$jaula/904-x" || return 1
+  : >"$jaula/901-x/patch_secure.py"
+  printf 'invariante: estado\nfalsador: verifica\n' >"$jaula/904-x/README.md" || return 1
+  : >"$jaula/904-x/patch_secure.py"
+  cat >"$jaula/904-x/exploit_poc.py" <<'POC'
+import sys
+args = sys.argv[1:]
+if "--app" in args:
+    app = args[args.index("--app") + 1]
+    if "sujeto_roto" in app:
+        sys.exit(3)
+    if "mentiroso" in app:
+        print("[FALSADOR] rechazos fingidos=0 []")
+        sys.exit(0)
+    sys.exit(0 if "--naive" in args else 1)
+sys.exit(0)
+POC
+  salida_pob=$(cd "$jaula" && sh ./verificar-capsulas.sh 2>&1)
+  rc_poblacion=$?
+  n_sana=$(printf '%s\n' "$salida_pob" | grep -c '^OK     904-x/')
+  n_denominador=$(printf '%s\n' "$salida_pob" | grep -c '^1/1 capsulas:')
+  rm -rf "$jaula"
+
+  if [ "$rc_admision" -eq 0 ] || [ "$n_sin_readme" -eq 0 ] || [ "$n_duplicado" -eq 0 ] || [ "$n_sin_poc" -eq 0 ] || [ "$n_rechazadas" -eq 0 ]; then
+    echo "FALLA  --self-test: la admision no cazo o no nombro (RC $rc_admision; SIN_README $n_sin_readme, CAMPO_DUPLICADO $n_duplicado, SIN_POC $n_sin_poc, rechazadas $n_rechazadas)"
+    return 1
+  fi
+  # RC 1 aqui es el acierto: la rechazada tiene que sonar. Lo que se exige del denominador es que
+  # la sana aparezca certificada y que el rechazado no la infle ni la reste.
+  if [ "$rc_poblacion" -ne 1 ] || [ "$n_sana" -eq 0 ] || [ "$n_denominador" -eq 0 ]; then
+    echo "FALLA  --self-test: la pareja sana+rechazada no midio la poblacion (RC $rc_poblacion, '904' certificada $n_sana, '1/1' $n_denominador)"
+    return 1
+  fi
+  publicar_brazo admision "OK     --self-test: sin README, 'invariante:' duplicado y sin PoC -> RC $rc_admision nombrando SIN_README, CAMPO_DUPLICADO y SIN_POC; una sana junto a una rechazada -> RC $rc_poblacion con '1/1' en el denominador"
+  brazos_ok="$brazos_ok admision"
+
   # Cotejo final, incondicional y fuera del septimo y del octavo brazo: si un brazo desaparece
   # del codigo no ejecuta su propio apunte, y el silencio es su unica huella. Puesto aqui,
   # borrar el septimo tampoco borra su lector --el cotejo sigue viendo que falta `censo`--, y
@@ -645,9 +782,33 @@ con_residuo=0
 medidas=0
 relojes=0
 caducan=0
+rechazadas=0
+
+# La poblacion se escribe una sola vez: es la lista de capsulas admitidas y la unica fuente de
+# los denominadores del censo. Antes cada fraccion releia `[0-9][0-9][0-9]-*/` por su cuenta, y
+# dos lecturas del mismo arbol pueden discrepar --medido el 17-Nov-2026: una capsula con
+# `invariante:` duplicado sumaba a la vez en `estado` y en `retorno` de la misma corrida--.
+POBLACION_FICHERO=$(mktemp "${TMPDIR:-/tmp}/poblacion.XXXXXX") || exit 1
+trap 'rm -f "$POBLACION_FICHERO"' EXIT
 
 for capsula in [0-9][0-9][0-9]-*/; do
   [ -d "$capsula" ] || continue
+
+  # La admision va antes de contar. Medido el 17-Nov-2026 con tres directorios de sonda: sin
+  # README salia nombrado con dos causas que no eran la suya, con `invariante:` dos veces salia
+  # OK llevando la contradiccion dentro, y sin `exploit_poc.py` se acusaba de «creerse el rechazo
+  # declarado». Los tres sumaban al censo publicando salud sobre lo que no era una capsula.
+  # `fallos` cuenta capsulas ADMITIDAS que no cumplen; `rechazadas`, directorios que no son
+  # capsulas. Sumar la rechazada a `fallos` publicaba `0/1` con la unica admitida en verde, la
+  # primera fraccion restando de un total donde el rechazado no entraba --medido el 17-Nov-2026
+  # por el noveno brazo, que por eso exige ver la sana certificada--.
+  if ! motivo_admision=$(admitir_capsula "$capsula"); then
+    echo "FALLA  ${capsula%/} ADMISION: $motivo_admision"
+    rechazadas=$((rechazadas + 1))
+    continue
+  fi
+
+  printf '%s\n' "${capsula%/}" >>"$POBLACION_FICHERO"
   total=$((total + 1))
 
   # Las dos lineas se leen, y la frontera se mide, sobre el estado PRISTINO: antes de que esta
@@ -834,15 +995,20 @@ for capsula in [0-9][0-9][0-9]-*/; do
   fi
 done
 
+if [ "$rechazadas" -gt 0 ]; then
+  echo ""
+  echo "$rechazadas directorio(s) con prefijo de capsula no admitidos: no cuentan en el denominador."
+fi
+
 # Un cero de inventario no es un verde: sin capsulas no se verifico nada.
 if [ "$total" -eq 0 ]; then
-  echo "FALLA  no se encontro ninguna capsula"
+  echo "FALLA  no se encontro ninguna capsula admitida"
   exit 1
 fi
 
 echo ""
 echo "$((total - fallos))/$total capsulas: ataque RC 0, parche RC 1, parche ingenuo RC 0, sujeto roto RC 3"
-verifican=$(grep -l '^falsador: verifica' [0-9][0-9][0-9]-*/README.md 2>/dev/null | wc -l | tr -d ' ')
+verifican=$(contar_declaracion "$POBLACION_FICHERO" '^falsador: verifica')
 echo "$verifican/$total capsulas declaran 'falsador: verifica' y su PoC no se cree un rechazo declarado."
 echo "$fronteras/$total declaran 'falsador: fuera-de-alcance' y su PoC se midio en jaula: $con_residuo con residuo."
 echo "cero residuo = no escribio ni en su arbol ni por HOME/TMPDIR/XDG; ruta absoluta y red, fuera."
@@ -854,8 +1020,8 @@ echo "cuelga por no terminar en ${LIMITE_CUELGA}s. Una etiqueta sin lector no se
 # mirar despues del rechazo y cuantas declaran que el efecto es el valor de retorno. El
 # cotejo con `falsador:` ya paso capsula por capsula; esto publica la poblacion sobre la
 # que se aplico.
-con_estado=$(grep -l '^invariante: estado' [0-9][0-9][0-9]-*/README.md 2>/dev/null | wc -l | tr -d ' ')
-con_retorno=$(grep -l '^invariante: retorno' [0-9][0-9][0-9]-*/README.md 2>/dev/null | wc -l | tr -d ' ')
+con_estado=$(contar_declaracion "$POBLACION_FICHERO" '^invariante: estado')
+con_retorno=$(contar_declaracion "$POBLACION_FICHERO" '^invariante: retorno')
 echo "$con_estado/$total declaran 'invariante: estado' (el falsificador tiene libro que mirar) y"
 echo "$con_retorno/$total 'invariante: retorno' (el efecto es el valor de retorno): pareja cotejada con 'falsador:' en esta corrida."
 echo "dos tipos de oraculo tienen lector --estado y retorno--; un tercero se nombra TIPO y no entra"
@@ -867,10 +1033,12 @@ echo "concurrencia sigue sin lector: se nombra, no se mide."
 # fila deja el anuncio corto, y una fila sin directorio promete lo que no existe.
 # Se cotejan aqui, en el mismo comando que ya se corre en cada push.
 en_tabla=$(grep -oE '^\| [0-9]{3} \|' README.md | grep -oE '[0-9]{3}' | sort -u)
-en_disco=$(ls -d [0-9][0-9][0-9]-*/ 2>/dev/null | cut -c1-3 | sort -u)
+# Los directorios que la tabla debe anunciar son los admitidos, no todos los que ve el glob: un
+# directorio rechazado en la admision no es una capsula y no tiene fila que cumplir.
+en_disco=$(cut -c1-3 "$POBLACION_FICHERO" | sort -u)
 
 if [ "$en_tabla" = "$en_disco" ]; then
-  echo "OK     tabla del README: $total filas, $total directorios"
+  echo "OK     tabla del README: $(printf '%s\n' "$en_tabla" | grep -c .) filas, $total directorios admitidos"
 else
   echo "FALLA  la tabla del README no coincide con los directorios (- solo en tabla, + solo en disco):"
   sobra=$(mktemp) || exit 1
@@ -882,4 +1050,6 @@ else
   fallos=$((fallos + 1))
 fi
 
-[ "$fallos" -eq 0 ] || exit 1
+# Un directorio no admitido no resta en la fraccion de arriba, pero tampoco se publica en verde:
+# el arbol que no pasa la aduana no es un arbol sano.
+[ "$fallos" -eq 0 ] && [ "$rechazadas" -eq 0 ] || exit 1

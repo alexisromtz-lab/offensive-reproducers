@@ -124,8 +124,8 @@ Un solo comando comprueba las once promesas en todas las cápsulas, y es el mism
 corre el CI en cada push — el badge de arriba es su resultado, no una promesa:
 
 ```bash
-./verificar-capsulas.sh             # las once reglas sobre todas las cápsulas
-./verificar-capsulas.sh --self-test # la pareja, la frontera, su alcance, el entorno, el vocabulario, el reloj, el censo y la conducta de los ocho se falsan a sí mismos
+./verificar-capsulas.sh             # las once reglas sobre todas las cápsulas, más la admisión, el censo y la tabla
+./verificar-capsulas.sh --self-test # la pareja, la frontera, su alcance, el entorno, el vocabulario, el reloj, el censo, la conducta y la admisión de los nueve se falsan a sí mismos
 ./verificar-capsulas.sh --escribir-base # único escritor de brazos.esperado: reescribe la base de conducta
 ```
 
@@ -166,6 +166,25 @@ vacío: `roto` exige `RC 3`, `cuelga` exige no terminar dentro del límite y `no
 reloj: si la cápsula declara `reloj: AHORA`, su PoC se corre otra vez con el instante en
 `4200000000` y el veredicto tiene que cambiar; si no cambia, el campo era decoración.
 
+La admisión —la duodécima marca del gate, y no una regla más del contrato— va antes que todas
+las demás y no mide el alcance de ningún lector: mide **qué población se admitió**. Un
+directorio que se llama como una cápsula pero no lo es entraba
+igual en el censo, así que las fracciones de abajo publicaban salud sobre lo que no habían
+leído. Medido el 17-Nov-2026 con tres sondas: sin `README.md` salía nombrado con dos causas
+que no eran la suya —`invariante:` vacío y `falsador:` no reconocido, sobre un archivo que no
+existía—; con `invariante: estado` y `invariante: retorno` a la vez salía **`OK`**, porque
+`head -1` leía la primera y la contradicción viajaba dentro; y sin `exploit_poc.py` se acusaba
+de «creerse el rechazo declarado», mandando a buscar un bug en un archivo que no está. La
+admisión es ahora una función con causa nombrada —`SIN_README`, `CAMPO_DUPLICADO`, `SIN_POC`,
+`SIN_PARCHE`, `SIN_DECLARACION`— y el directorio rechazado **no entra en el denominador**: se
+nombra, se cuenta aparte y el comando sale rojo. Su falsador es el noveno brazo: tres defectos
+a la vez tienen que salir nombrados, y una pareja de una sana más una rechazada tiene que
+certificar la sana con `1/1` en la fracción. Ese segundo lado mordió el mismo día —el rechazo
+sumaba en `fallos`, que resta de un total donde nunca entró, y la única admitida publicaba
+`0/1` en verde—, y es la mutación que queda como control negativo. Límite declarado: la
+mutación que rechaza *toda* cápsula no la caza este brazo —sin admitidas no hay población que
+medir—, la caza el primero, que publica que la pareja no se cazó.
+
 Y una regla que el PoC cobra antes de que el gate la vea: **sin `--naive`, todas las vías
 tienen que coincidir.** Un veredicto que satisface a una sola esconde la regresión de la
 otra —la vía que se cree el rechazo quedaría certificada por lo que hizo su vecina—, así que
@@ -201,7 +220,7 @@ dos tipos de oraculo tienen lector --estado y retorno--; un tercero se nombra TI
 1/12 declaran 'reloj:' y su veredicto se movio al instante 4200000000; 1 caducan ahi.
 el tiempo no es un tercer tipo: es una dimension del sujeto, con lector propio desde el 17-Nov-2026.
 concurrencia sigue sin lector: se nombra, no se mide.
-OK     tabla del README: 12 filas, 12 directorios
+OK     tabla del README: 12 filas, 12 directorios admitidos
 ```
 
 Sin cápsulas el script falla en vez de salir en verde: un cero de inventario no es una

@@ -21,10 +21,11 @@ jobs:
         run: python3 --version
 
       # El self-test tambien necesita lector: falsa la pareja, la frontera, el alcance de su foto,
-      # el entorno de las tres puertas, el vocabulario, el reloj, el censo de los ocho brazos y la
-      # conducta que cada uno publica. Si alguien borra un cotejo, este paso se pone rojo antes de
-      # que el gate grande siga dando verde sobre las declaraciones.
-      - name: la pareja, la frontera, su alcance, el entorno, el vocabulario, el reloj, el censo y la conducta de los ocho brazos se falsan a si mismas
+      # el entorno de las tres puertas, el vocabulario, el reloj, el censo de los nueve brazos, la
+      # conducta que cada uno publica y la admision que decide que poblacion se cuenta. Si alguien
+      # borra un cotejo, este paso se pone rojo antes de que el gate grande siga dando verde sobre
+      # las declaraciones.
+      - name: la pareja, la frontera, su alcance, el entorno, el vocabulario, el reloj, el censo, la conducta y la admision de los nueve brazos se falsan a si mismas
         run: ./verificar-capsulas.sh --self-test
 
       - name: cada capsula explota en el vulnerable y se cierra en el parche

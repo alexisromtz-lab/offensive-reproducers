@@ -4,5 +4,6 @@ vocabulario|OK     --self-test: 'no-medido' con fingidos>0, 'roto' con RC 0, 'cu
 tiempo|OK     --self-test: 'reloj: AHORA' ignorado -> RC 1 nombrando RELOJ; el mismo campo con un veredicto que cambia -> RC 0
 alcance|OK     --self-test: PoC que escapa por 'tempfile' y '~' -> RC 1 nombrando FRONTERA; el mismo PoC sin escapar -> RC 0
 entorno|OK     --self-test: 'tempfile' y '~' bajo con_limite y reloj_en_jaula -> 0 archivo(s) fuera de su casa; el mismo PoC sin jaula -> 2
-censo|OK     --self-test: censo de 8 brazos cotejado por nombre; sin 'entorno' -> RC 1 nombrandolo; con el censo entero -> RC 0
+censo|OK     --self-test: censo de 9 brazos cotejado por nombre; sin 'entorno' -> RC 1 nombrandolo; con el censo entero -> RC 0
 conducta|OK     --self-test: conducta cotejada contra la base; sin la linea de un brazo -> RC 1 nombrandolo; con la base entera -> RC 0
+admision|OK     --self-test: sin README, 'invariante:' duplicado y sin PoC -> RC 1 nombrando SIN_README, CAMPO_DUPLICADO y SIN_POC; una sana junto a una rechazada -> RC 1 con '1/1' en el denominador
