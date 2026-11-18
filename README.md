@@ -4,7 +4,7 @@
 
 Laboratorios sintéticos de seguridad ofensiva. Cada cápsula es un fallo real,
 reconstruido desde cero en código propio, con su exploit determinista y su parche.
-Todo corre en segundos, sin dependencias externas y sin red externa: quince el gate.
+Todo corre en segundos, sin dependencias externas y sin red externa.
 
 > **¿Tienes un servicio web o una API?** → [Trabajo sobre tu servicio](#trabajo-sobre-tu-servicio)
 
@@ -39,8 +39,9 @@ técnico reconstruido sobre un entorno mínimo propio.
 | 010 | La validación acepta lo que su propia serialización no devuelve (`inf` que se guarda `null`) | A08 | [010-serialization-validation-asymmetry](010-serialization-validation-asymmetry/) | `python3 exploit_poc.py` |
 | 011 | El registro pierde el evento que importa y la vigilancia lo da por registrado (falla abierto) | A09 | [011-logging-fail-open](011-logging-fail-open/) | `python3 exploit_poc.py` |
 | 013 | La credencial cambia y lo que la credencial vieja ya había emitido sigue entrando (la sesión y el «recordarme» sobreviven) | A07 | [013-session-survives-credential-change](013-session-survives-credential-change/) | `python3 exploit_poc.py` |
+| 014 | La clave de idempotencia vive en el mostrador y el libro no la conoce (el webhook y la conciliación reasientan el mismo cobro) | A04 | [014-idempotency-key-outside-ledger](014-idempotency-key-outside-ledger/) | `python3 exploit_poc.py` |
 
-**Cobertura OWASP Top 10 (2021): nueve de las diez categorías.** A01 cubierta por 004 y 005 · A02 por 001 y 009 · A03 por 006 · A04 por 008 · A05 por 007 · A07 por 013 · A08 por 003 y 010 · A09 por 011 · A10 por 002. Fuera queda A06 (componentes vulnerables y desactualizados), descartada por diseño: demostrarla exige una dependencia real con CVE real, y esta casa no instala dependencias. La tabla se coteja contra los directorios en `./verificar-capsulas.sh`; esta línea se mide con
+**Cobertura OWASP Top 10 (2021): nueve de las diez categorías.** A01 cubierta por 004 y 005 · A02 por 001 y 009 · A03 por 006 · A04 por 008 y 014 · A05 por 007 · A07 por 013 · A08 por 003 y 010 · A09 por 011 · A10 por 002. Fuera queda A06 (componentes vulnerables y desactualizados), descartada por diseño: demostrarla exige una dependencia real con CVE real, y esta casa no instala dependencias. La tabla se coteja contra los directorios en `./verificar-capsulas.sh`; esta línea se mide con
 `grep -hoE 'A(0[0-9]|10):2021' */README.md | sort -u`.
 
 La numeración salta de 011 a 013: el sujeto de 013 nació con otro nombre de directorio y se renumeró
@@ -286,21 +287,22 @@ OK     009-truncated-hash-salt/ (vulnerable=0 parche=1 ingenuo=0 roto=3 control=
 OK     010-serialization-validation-asymmetry/ (vulnerable=0 parche=1 ingenuo=0 roto=3 control=3 falsador=verifica)
 OK     011-logging-fail-open/ (vulnerable=0 parche=1 ingenuo=0 roto=3 control=3 falsador=verifica)
 OK     013-session-survives-credential-change/ (vulnerable=0 parche=1 ingenuo=0 roto=3 control=3 falsador=verifica)
+OK     014-idempotency-key-outside-ledger/ (vulnerable=0 parche=1 ingenuo=0 roto=3 control=3 falsador=verifica)
 
-12/12 capsulas: ataque RC 0, parche RC 1, parche ingenuo RC 0, sujeto roto RC 3
-4/12 capsulas declaran 'falsador: verifica' y su PoC no se cree un rechazo declarado.
-5/12 declaran 'falsador: fuera-de-alcance' y su PoC se midio en jaula: 0 con residuo.
+13/13 capsulas: ataque RC 0, parche RC 1, parche ingenuo RC 0, sujeto roto RC 3
+5/13 capsulas declaran 'falsador: verifica' y su PoC no se cree un rechazo declarado.
+5/13 declaran 'falsador: fuera-de-alcance' y su PoC se midio en jaula: 0 con residuo.
 cero residuo = no escribio ni en su arbol ni por HOME/TMPDIR/XDG; ruta absoluta y red, fuera.
-12/12 etiquetas de 'falsador:' se midieron en esta corrida: fuera-de-alcance en jaula,
+13/13 etiquetas de 'falsador:' se midieron en esta corrida: fuera-de-alcance en jaula,
 verifica contra el parche mentiroso, no-medido por 'rechazos fingidos=0', roto por RC 3 y
 cuelga por no terminar en 5s. Una etiqueta sin lector no se publica.
-7/12 declaran 'invariante: estado' (el falsificador tiene libro que mirar) y
-5/12 'invariante: retorno' (el efecto es el valor de retorno): pareja cotejada con 'falsador:' en esta corrida.
+8/13 declaran 'invariante: estado' (el falsificador tiene libro que mirar) y
+5/13 'invariante: retorno' (el efecto es el valor de retorno): pareja cotejada con 'falsador:' en esta corrida.
 dos tipos de oraculo tienen lector --estado y retorno--; un tercero se nombra TIPO y no entra
-1/12 declaran 'reloj:' y su veredicto se movio al instante 4200000000; 1 caducan ahi.
+1/13 declaran 'reloj:' y su veredicto se movio al instante 4200000000; 1 caducan ahi.
 el tiempo no es un tercer tipo: es una dimension del sujeto, con lector propio desde el 17-Nov-2026.
 concurrencia sigue sin lector: se nombra, no se mide.
-OK     tabla del README: 12 filas, 12 directorios admitidos
+OK     tabla del README: 13 filas, 13 directorios admitidos
 ```
 
 Sin cápsulas el script falla en vez de salir en verde: un cero de inventario no es una

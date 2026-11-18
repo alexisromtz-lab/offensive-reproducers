@@ -26,9 +26,9 @@ Un RC 1 con `[FALSADOR] rechazos fingidos=0` **no** es un veredicto: el falsific
 llego a mentir y lo que se mide es su alcance, no el oraculo. Esa fila del censo se
 publica NO_MEDIDO.
 
-Alcance medido (2026-11-17, doce capsulas)
-------------------------------------------
-`verifica`        005, 010, 011, 013 · el PoC consulta el libro despues del rechazo
+Alcance medido (2026-11-18, trece capsulas)
+-------------------------------------------
+`verifica`        005, 010, 011, 013, 014 · el PoC consulta el libro despues del rechazo
 `engañado`        005, 008, 010  · antes del endurecimiento de 005 y 010; hoy ninguno
 `fuera de alcance` 001, 002, 006, 007, 008 · el efecto **es** el valor de retorno que el
                   falsificador descarta al lanzar: no hay estado que mirar, ni sano ni
