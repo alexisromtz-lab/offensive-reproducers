@@ -108,9 +108,9 @@ segunda capa, y la lectura falla cerrada.
 | libro que no asienta | NO EJERCIDA — sin asiento | BLOQUEADA | **NO** | **3** |
 
 ```bash
-python3 exploit_poc.py                                  # 0  cambia y se admite
-python3 exploit_poc.py --app patch_secure.py --naive    # 0  la clase sigue abierta
-python3 exploit_poc.py --app patch_secure.py            # 1  la frontera rechaza
+python3 exploit_poc.py                                  # RC 0 · cambia y se admite
+python3 exploit_poc.py --app patch_secure.py --naive    # RC 0 · la clase sigue abierta
+python3 exploit_poc.py --app patch_secure.py            # RC 1 · la frontera rechaza
 ```
 
 El control corre dentro de la misma corrida. Un sujeto que acepta el cobro y **no lo guarda** deja

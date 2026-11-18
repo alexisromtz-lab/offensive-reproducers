@@ -93,6 +93,25 @@
 # sin brazo, un ordinal repetido y un hueco se nombran, y el cierre lo aplica a los registros en
 # vigor. Los ordinales de esta cabecera siguen siendo prosa historica y se declaran como tales:
 # numeran promesas, no marcas, y reescribirlos seria cambiar el pasado. Coste medido: 0,1 s.
+#
+# La reproduccion publicada, el 17-Nov-2026: las anteriores auditan el instrumento y lo que el
+# repo anuncia en la raiz. Ninguna media el bloque «Reproducir» que cada capsula publica en su
+# propio README, y ese bloque es el escaparate: medido en las doce capsulas lleva 36 cifras de RC
+# escritas a mano y cero lectores, en dos dialectos --cinco capsulas dicen `# RC 0 · ...` y siete
+# publican el numero sin la palabra RC, `# 0  ...`--. Editar una capsula sin tocar su README
+# dejaba al repo publicando una respuesta que ya no media, con el badge en verde. Ahora el bucle
+# principal pasa los tres RC que acaba de medir a `cotejar_reproduccion`, que parsea el README ya
+# leido: una capsula, una respuesta --cero o dos bloques con los tres comandos se nombran--, cada
+# comando tiene que publicar su RC, y el publicado tiene que ser el medido. No lanza un
+# subproceso en el bucle: cuesta cero corridas extra.
+#
+# El brazo que lo guarda mide dos cosas y la segunda se aprendio midiendo: la funcion y la
+# llamada. Con el bloque del bucle arrancado y los registros en orden --censo, contrato, indice
+# y base cuadrando entre si--, el gate publicaba RC 0 y cero FALLA con una capsula que decia
+# RC 0 donde la corrida mide RC 1: los doce cotejos anteriores cotejan registros, y ninguno
+# mira si el lector sigue enchufado. Por eso el brazo trece corre el gate entero sobre una
+# capsula real en una jaula --la sana en verde, la mentirosa acusada--: 8 s medidos, y sin eso
+# el resto del brazo custodia un codigo que nadie llama.
 set -u
 
 # `falsador: cuelga` no deja codigo de salida, asi que su unica medida posible es un reloj.
@@ -210,7 +229,7 @@ PY
 # el archivo `brazos.esperado` guarda la base fechada contra la que se coteja. Un cambio de
 # conducta legitimo cambia la linea, y quien lo hace la reescribe con `--escribir-base` en el
 # mismo acto: el cambio queda en el diff, que es donde un humano lo lee.
-CENSO_BRAZOS="pareja frontera vocabulario tiempo alcance entorno censo conducta admision publicado contrato marcas"
+CENSO_BRAZOS="pareja frontera vocabulario tiempo alcance entorno censo conducta admision publicado contrato marcas reproduccion"
 
 # Coteja lo ejercido contra lo declarado, dos listas de nombres separados por espacio. Publica
 # cada diferencia con nombre propio y devuelve RC 1 si hay alguna. Es puro a proposito: recibe
@@ -504,6 +523,80 @@ raise SystemExit(rc)
 PY
 }
 
+# Coteja la respuesta que una capsula publica contra la que esta corrida acaba de medir. Es la
+# marca trece y la primera cuyo sujeto es el producto: el bucle ya tiene en la mano los tres RC
+# del PoC, asi que el lector recibe los tres y no relanza nada. Aparea por texto exacto
+# normalizado --nunca por prefijo: `python3 exploit_poc.py` es prefijo de los otros dos, y un
+# `startswith` haria que la linea del ataque respondiera por las tres--. Devuelve RC 1 y nombra
+# el defecto: cero bloques cercados con los tres comandos, mas de uno, un comando sin RC en su
+# comentario, o un RC publicado distinto del medido.
+cotejar_reproduccion() {
+  python3 - "$@" <<'PY'
+import os, re, sys
+
+contexto, directorio, esperados = sys.argv[1], sys.argv[2], sys.argv[3:6]
+comandos = ["python3 exploit_poc.py",
+            "python3 exploit_poc.py --app patch_secure.py --naive",
+            "python3 exploit_poc.py --app patch_secure.py"]
+try:
+    with open(os.path.join(directorio, "README.md"), encoding="utf-8") as f:
+        lineas = f.read().splitlines()
+except OSError:
+    print("FALLA  %s reproduccion: no se pudo leer %s/README.md" % (contexto, directorio.rstrip("/")))
+    raise SystemExit(1)
+
+bloques, actual, dentro = [], [], False
+for linea in lineas:
+    if linea.lstrip().startswith("```"):
+        if dentro:
+            bloques.append(actual)
+            actual = []
+        dentro = not dentro
+        continue
+    if dentro:
+        actual.append(linea)
+
+publicado = {}
+candidatos = 0
+for bloque in bloques:
+    por_comando = {}
+    for linea in bloque:
+        if "#" not in linea:
+            continue
+        comando, comentario = linea.split("#", 1)
+        comando = " ".join(comando.split())
+        if comando not in comandos:
+            continue
+        m = re.search(r"\bRC\s+(\d+)\b", comentario)
+        por_comando.setdefault(comando, None if not m else int(m.group(1)))
+    if len(por_comando) == len(comandos):
+        candidatos += 1
+        publicado = por_comando
+
+if candidatos != 1:
+    if candidatos == 0:
+        que = "no hay un bloque cercado con los tres comandos"
+    else:
+        que = ("hay %d bloques cercados con los tres comandos y el escaparate "
+               "no puede publicar dos respuestas" % candidatos)
+    print("FALLA  %s reproduccion: %s" % (contexto, que))
+    raise SystemExit(1)
+
+rc = 0
+for comando, esperado in zip(comandos, esperados):
+    declarado = publicado[comando]
+    if declarado is None:
+        print("FALLA  %s reproduccion: el comando '" % contexto + comando
+              + "' no publica un RC en su comentario")
+        rc = 1
+    elif declarado != int(esperado):
+        print("FALLA  %s reproduccion: el comando '" % contexto + comando
+              + "' publica RC %d y esta corrida mide RC %s" % (declarado, esperado))
+        rc = 1
+raise SystemExit(rc)
+PY
+}
+
 # La puerta de entrada. Hasta el 17-Nov-2026 el gate certificaba que lo bien formado explota y
 # cierra, y nunca habia falsado que lo mal formado se rechace nombrando su causa: medido con tres
 # directorios de sonda, ninguno de los tres defectos salia nombrado y los tres sumaban al censo.
@@ -568,6 +661,18 @@ self_test() {
   CONDUCTA_FICHERO=$(mktemp "${TMPDIR:-/tmp}/conducta.XXXXXX") || return 1
   trap 'rm -f "$CONDUCTA_FICHERO"' EXIT
   N_CENSO=$(printf '%s\n' $CENSO_BRAZOS | wc -w | tr -d ' ')
+  # Desde la marca trece una capsula tambien es lo que publica, y el lector de la reproduccion vive
+  # en el bucle principal, fuera de todo brazo: no distingue una jaula de sonda del escaparate. Las
+  # capsulas sinteticas que plantan los brazos son capsulas, asi que publican su bloque; los tres
+  # RC son los que mide cualquier PoC de este contrato --explota, sigue explotando con --naive y
+  # cierra con el parche--. Sin esto cada brazo con jaula mediria el defecto del anterior.
+  REPRODUCCION_ESPERADA='
+```bash
+python3 exploit_poc.py                                # RC 0 · el sujeto cae
+python3 exploit_poc.py --app patch_secure.py --naive  # RC 0 · el ingenuo tambien
+python3 exploit_poc.py --app patch_secure.py          # RC 1 · el canonico aguanta
+```
+'
   capsula=$(cd "$origen" && ls -d [0-9][0-9][0-9]-*/ 2>/dev/null | while read -r c; do
     if grep -q '^falsador: verifica' "$c"README.md 2>/dev/null; then echo "$c"; break; fi
   done)
@@ -611,7 +716,7 @@ self_test() {
   cp "$origen/verificar-capsulas.sh" "$origen/sujeto_roto.py" "$origen/parche_mentiroso.py" "$origen/inyector_reloj.py" "$jaula/" || return 1
   mkdir "$jaula/999-frontera" || return 1
   printf '| 999 | prueba | A00:2021 |\n' >"$jaula/README.md" || return 1
-  printf 'invariante: retorno\nfalsador: fuera-de-alcance\n' >"$jaula/999-frontera/README.md" || return 1
+  printf 'invariante: retorno\nfalsador: fuera-de-alcance\n%s' "$REPRODUCCION_ESPERADA" >"$jaula/999-frontera/README.md" || return 1
   : >"$jaula/999-frontera/patch_secure.py"
   cat >"$jaula/999-frontera/exploit_poc.py" <<'POC'
 import pathlib, sys
@@ -669,7 +774,7 @@ POC
     fingidos=${resto##*:}
     mkdir "$jaula/$dir" || return 1
     printf '| %s | prueba | A00:2021 |\n' "${dir%%-*}" >>"$jaula/README.md"
-    printf 'invariante: estado\nfalsador: %s\n' "$etiqueta" >"$jaula/$dir/README.md"
+    printf 'invariante: estado\nfalsador: %s\n%s' "$etiqueta" "$REPRODUCCION_ESPERADA" >"$jaula/$dir/README.md"
     : >"$jaula/$dir/patch_secure.py"
     cat >"$jaula/$dir/exploit_poc.py" <<POC
 import sys
@@ -691,7 +796,7 @@ POC
   # para; el hueco declarado es el que despues se convierte en acto.
   mkdir "$jaula/995-x" || return 1
   printf '| 995 | prueba | A00:2021 |\n' >>"$jaula/README.md"
-  printf 'invariante: tiempo\nfalsador: verifica\n' >"$jaula/995-x/README.md"
+  printf 'invariante: tiempo\nfalsador: verifica\n%s' "$REPRODUCCION_ESPERADA" >"$jaula/995-x/README.md"
   : >"$jaula/995-x/patch_secure.py"
   cat >"$jaula/995-x/exploit_poc.py" <<'POC'
 import sys
@@ -741,7 +846,7 @@ POC
     clase=${fila##*:}
     mkdir "$jaula/$dir" || return 1
     printf '| %s | prueba | A00:2021 |\n' "${dir%%-*}" >>"$jaula/README.md"
-    printf 'invariante: retorno\nfalsador: fuera-de-alcance\nreloj: AHORA\n' >"$jaula/$dir/README.md"
+    printf 'invariante: retorno\nfalsador: fuera-de-alcance\nreloj: AHORA\n%s' "$REPRODUCCION_ESPERADA" >"$jaula/$dir/README.md"
     : >"$jaula/$dir/patch_secure.py"
     if [ "$clase" = sensible ]; then
       desenlace='sys.exit(1 if os.environ.get("AHORA") else 0)'
@@ -791,7 +896,7 @@ POC
   cp "$origen/verificar-capsulas.sh" "$origen/sujeto_roto.py" "$origen/parche_mentiroso.py" "$origen/inyector_reloj.py" "$jaula/" || return 1
   printf '| 992 | prueba | A00:2021 |\n' >"$jaula/README.md" || return 1
   mkdir "$jaula/992-x" || return 1
-  printf 'invariante: retorno\nfalsador: fuera-de-alcance\n' >"$jaula/992-x/README.md" || return 1
+  printf 'invariante: retorno\nfalsador: fuera-de-alcance\n%s' "$REPRODUCCION_ESPERADA" >"$jaula/992-x/README.md" || return 1
   : >"$jaula/992-x/patch_secure.py"
   cat >"$jaula/992-x/exploit_poc.py" <<'POC'
 import os, pathlib, sys, tempfile
@@ -964,7 +1069,7 @@ POC
   printf '| 904 | prueba | A00:2021 |\n' >"$jaula/README.md" || return 1
   mkdir "$jaula/901-x" "$jaula/904-x" || return 1
   : >"$jaula/901-x/patch_secure.py"
-  printf 'invariante: estado\nfalsador: verifica\n' >"$jaula/904-x/README.md" || return 1
+  printf 'invariante: estado\nfalsador: verifica\n%s' "$REPRODUCCION_ESPERADA" >"$jaula/904-x/README.md" || return 1
   : >"$jaula/904-x/patch_secure.py"
   cat >"$jaula/904-x/exploit_poc.py" <<'POC'
 import sys
@@ -1138,6 +1243,101 @@ PY
   fi
   publicar_brazo marcas "OK     --self-test: indice, censo y contrato son el mismo conjunto de brazos; sin una fila -> RC $rc_mfalta nombrandola, ordinal repetido -> RC $rc_mordinal, marca sin contrato -> RC $rc_mcontrato"
   brazos_ok="$brazos_ok marcas"
+
+  # Decimotercer brazo: la reproduccion publicada. Va antes del contrato porque el control
+  # positivo de aquel coteja el registro contra la conducta viva, y la linea de este brazo no
+  # existe hasta que este brazo la publica. Mide el sujeto que las doce anteriores no miran: la
+  # respuesta que la capsula publica sobre si misma. Se falsifica en tres direcciones --RC
+  # publicado que ya no es el medido, cerca ausente, RC sin numero-- y con el control positivo
+  # primero, porque un lector que acusa a la capsula sana no mide nada.
+  jaula_reproduccion=$(mktemp -d "${TMPDIR:-/tmp}/reproduccion.XXXXXX") || return 1
+  trap 'rm -f "$CONDUCTA_FICHERO"; rm -rf "${jaula_reproduccion:-}"' EXIT
+  mkdir -p "$jaula_reproduccion/991-x" || return 1
+  printf '# 991-x · capsula sintetica\n%s' "$REPRODUCCION_ESPERADA" > "$jaula_reproduccion/991-x/README.md" || return 1
+  salida_rsano=$(cotejar_reproduccion --self-test "$jaula_reproduccion/991-x" 0 0 1)
+  rc_rsano=$?
+  nom_rsano=$(printf '%s\n' "$salida_rsano" | grep -c 'FALLA')
+  if [ "$rc_rsano" -ne 0 ] || [ "$nom_rsano" -ne 0 ]; then
+    echo "FALLA  --self-test: la reproduccion acuso a la capsula sana (RC $rc_rsano, $nom_rsano lineas FALLA)"
+    printf '%s\n' "$salida_rsano" | sed 's/^/       /'
+    return 1
+  fi
+  python3 - "$jaula_reproduccion" <<'PY' || return 1
+import os, sys
+
+jaula = sys.argv[1]
+with open(os.path.join(jaula, "991-x", "README.md"), encoding="utf-8") as f:
+    original = f.read()
+
+def escribir(nombre, texto):
+    destino = os.path.join(jaula, nombre)
+    os.makedirs(destino, exist_ok=True)
+    with open(os.path.join(destino, "README.md"), "w", encoding="utf-8") as f:
+        f.write(texto)
+
+escribir("991-a", original.replace("# RC 1 · el canonico aguanta", "# RC 0 · el canonico aguanta"))
+escribir("991-b", "\n".join(l for l in original.splitlines()
+                            if not l.lstrip().startswith("```")) + "\n")
+escribir("991-c", original.replace("# RC 0 · el sujeto cae", "# el sujeto cae"))
+PY
+  salida_rrcambio=$(cotejar_reproduccion --self-test "$jaula_reproduccion/991-a" 0 0 1)
+  rc_rrcambio=$?
+  nom_rrcambio=$(printf '%s\n' "$salida_rrcambio" | grep -c "publica RC 0 y esta corrida mide RC 1")
+  if [ "$rc_rrcambio" -eq 0 ] || [ "$nom_rrcambio" -eq 0 ]; then
+    echo "FALLA  --self-test: la reproduccion no cazo el RC publicado (RC $rc_rrcambio, nombrado $nom_rrcambio veces)"
+    return 1
+  fi
+  salida_rceca=$(cotejar_reproduccion --self-test "$jaula_reproduccion/991-b" 0 0 1)
+  rc_rceca=$?
+  nom_rceca=$(printf '%s\n' "$salida_rceca" | grep -c "no hay un bloque cercado")
+  if [ "$rc_rceca" -eq 0 ] || [ "$nom_rceca" -eq 0 ]; then
+    echo "FALLA  --self-test: la reproduccion no cazo la cerca ausente (RC $rc_rceca, nombrado $nom_rceca veces)"
+    return 1
+  fi
+  salida_rsinrc=$(cotejar_reproduccion --self-test "$jaula_reproduccion/991-c" 0 0 1)
+  rc_rsinrc=$?
+  nom_rsinrc=$(printf '%s\n' "$salida_rsinrc" | grep -c "no publica un RC en su comentario")
+  if [ "$rc_rsinrc" -eq 0 ] || [ "$nom_rsinrc" -eq 0 ]; then
+    echo "FALLA  --self-test: la reproduccion no cazo el RC sin numero (RC $rc_rsinrc, nombrado $nom_rsinrc veces)"
+    return 1
+  fi
+  # Lo anterior mide la funcion; el lector se aplica en la llamada, y una llamada se borra sin
+  # tocar el texto de la funcion. Medido el 17-Nov-2026: con el bloque del bucle principal
+  # arrancado, una capsula que publicaba RC 0 donde la corrida mide RC 1 pasaba el gate en
+  # verde, RC 0 y cero FALLA --y el censo, el contrato y el indice seguian cuadrando, porque
+  # todos cotejan registros--. Por eso aqui se corre el gate entero sobre una capsula real en
+  # una jaula: la sana en verde y la que miente acusada por el bucle, no por este brazo.
+  jaula_llamada=$(mktemp -d "${TMPDIR:-/tmp}/llamada.XXXXXX") || return 1
+  trap 'rm -f "$CONDUCTA_FICHERO"; rm -rf "${jaula_reproduccion:-}" "${jaula_llamada:-}"' EXIT
+  cp "$origen/verificar-capsulas.sh" "$origen/sujeto_roto.py" "$origen/parche_mentiroso.py" \
+     "$origen/inyector_reloj.py" "$jaula_llamada/" || return 1
+  cp -R "$origen/006-sql-injection-numeric-context" "$jaula_llamada/" || return 1
+  printf '| 006 | capsula del brazo trece |\n' > "$jaula_llamada/README.md" || return 1
+  (cd "$jaula_llamada" && sh ./verificar-capsulas.sh) > "$jaula_llamada/sana.txt" 2>&1
+  rc_llamada_sana=$?
+  (cd "$jaula_llamada" && python3 - <<'PY'
+import re
+ruta = "006-sql-injection-numeric-context/README.md"
+with open(ruta, encoding="utf-8") as f:
+    texto = f.read()
+nuevo = re.sub(r"(--app patch_secure\.py\s+#\s*RC\s*)1", r"\g<1>0", texto, count=1)
+if nuevo == texto:
+    raise SystemExit(1)
+with open(ruta, "w", encoding="utf-8") as f:
+    f.write(nuevo)
+PY
+  ) || return 1
+  (cd "$jaula_llamada" && sh ./verificar-capsulas.sh) > "$jaula_llamada/miente.txt" 2>&1
+  rc_llamada_miente=$?
+  nom_llamada=$(grep -c 'reproduccion: el comando' "$jaula_llamada/miente.txt")
+  if [ "$rc_llamada_sana" -ne 0 ] || [ "$rc_llamada_miente" -eq 0 ] || [ "$nom_llamada" -eq 0 ]; then
+    echo "FALLA  --self-test: el lector de la reproduccion no acusa a una capsula que miente dentro del bucle (sana RC $rc_llamada_sana, mentirosa RC $rc_llamada_miente, nombrada $nom_llamada veces)"
+    grep 'FALLA' "$jaula_llamada/sana.txt" "$jaula_llamada/miente.txt" | sed 's/^/       /'
+    return 1
+  fi
+  rm -rf "$jaula_reproduccion" "$jaula_llamada"
+  publicar_brazo reproduccion "OK     --self-test: el bloque Reproducir publicado y el medido son el mismo; RC cambiado -> RC $rc_rrcambio, cerca ausente -> RC $rc_rceca, RC sin numero -> RC $rc_rsinrc; en el bucle, la capsula que miente -> RC $rc_llamada_miente y la sana -> RC $rc_llamada_sana"
+  brazos_ok="$brazos_ok reproduccion"
 
   # Undecimo brazo: el contrato de la base. Corre despues del decimo y antes del cotejo final
   # porque mide el certificado que los otros diez firman, y aqui se falsifica en cuatro
@@ -1485,6 +1685,12 @@ for capsula in [0-9][0-9][0-9]-*/; do
         echo "FALLA  $capsula PAREJA: 'invariante: $invariante' con 'falsador: $falsador_declarado'; son la misma afirmacion con signo distinto"
         censo_ok=no ;;
     esac
+  fi
+  # La reproduccion que la capsula publica, cotejada contra lo que esta corrida acaba de medir.
+  # Va fuera de todo brazo y es incondicional: borrar el decimotercer brazo no borra este lector.
+  if ! motivo_reproduccion=$(cotejar_reproduccion "${capsula%/}" "$capsula" "$vulnerable" "$ingenuo" "$parche"); then
+    printf '%s\n' "$motivo_reproduccion"
+    censo_ok=no
   fi
   [ "$censo_ok" = si ] || censo=no
 

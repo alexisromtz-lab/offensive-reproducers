@@ -127,9 +127,9 @@ en el sumidero, así que una brecha se ve en vez de publicarse como cuadre.
 | servicio que no opera | RECHAZADA — «no autorizada» | RECHAZADA — nada que tapar | **NO** | **3** |
 
 ```bash
-python3 exploit_poc.py                                  # 0  mueve sin rastro
-python3 exploit_poc.py --app patch_secure.py --naive    # 0  la clase sigue abierta
-python3 exploit_poc.py --app patch_secure.py            # 1  la frontera rechaza
+python3 exploit_poc.py                                  # RC 0 · mueve sin rastro
+python3 exploit_poc.py --app patch_secure.py --naive    # RC 0 · la clase sigue abierta
+python3 exploit_poc.py --app patch_secure.py            # RC 1 · la frontera rechaza
 ```
 
 El control corre dentro de la misma corrida. Un sujeto que rechaza **todo** deja las dos vías en

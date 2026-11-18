@@ -120,9 +120,9 @@ error de desarrollo— y no como una limpieza que nadie escribió.
 | servicio que no autentica | NO EJERCIDA — no deja cambiar nada | NO EJERCIDA — igual | **NO** | **3** |
 
 ```bash
-python3 exploit_poc.py                                  # 0  las dos vías abren
-python3 exploit_poc.py --app patch_secure.py --naive    # 0  la concesión sigue abierta
-python3 exploit_poc.py --app patch_secure.py            # 1  ninguna de las dos se honra
+python3 exploit_poc.py                                  # RC 0 · las dos vías abren
+python3 exploit_poc.py --app patch_secure.py --naive    # RC 0 · la concesión sigue abierta
+python3 exploit_poc.py --app patch_secure.py            # RC 1 · ninguna de las dos se honra
 ```
 
 El control corre dentro de la misma corrida. Un sujeto que rechaza **todo** deja las dos vías en
