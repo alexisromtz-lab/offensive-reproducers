@@ -1,0 +1,24 @@
+# Contrato de la base de conducta: una fila por brazo, tres campos separados por tabulador.
+#
+#   brazo<TAB>verde<TAB>rojo
+#
+# `verde` es el token que la linea OK del brazo tiene que publicar: dice lo que el brazo mide.
+# `rojo` es el marcador que tiene que imprimir la FALLA del brazo: dice donde muerde. Los dos
+# se cotejan en cada push --`verde` contra la linea de `brazos.esperado`, `rojo` contra las
+# lineas FALLA del codigo-- y `--escribir-base` no puede bendecir una linea que pierda el suyo.
+#
+# Medido el 17-Nov-2026: un brazo degradado a «OK --self-test: hecho» fue bendecido por
+# `--escribir-base` y la corrida salio RC 0 con «conducta de 10 brazos identica». La base
+# certificaba estabilidad, no fuerza. Sin esta columna, un brazo puede dejar de medir y seguir
+# publicando salud. Añadir un brazo exige fila aqui: el undecimo brazo lo coteja y lo nombra.
+pareja	PAREJA	la pareja contradictoria no se cazo
+frontera	FRONTERA	el PoC que escribe no se cazo
+vocabulario	NO-MEDIDO	una etiqueta del censo paso sin lector
+tiempo	RELOJ	el 'reloj:' que no mueve su veredicto no se cazo
+alcance	tempfile	el PoC que escapa por HOME/TMPDIR no se cazo
+entorno	fuera de su casa	escribieron fuera de su casa
+censo	cotejado por nombre	el censo no mordio al brazo ausente
+conducta	cotejada contra la base	la conducta no mordio a la base sin la linea
+admision	SIN_README	la admision no cazo o no nombro
+publicado	asercion mutilada	lo publicado no mordio el bloque mutilado
+contrato	registro y censo	el contrato no cazo al brazo sin fila

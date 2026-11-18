@@ -124,9 +124,9 @@ Un solo comando comprueba las once promesas en todas las cápsulas, y es el mism
 corre el CI en cada push — el badge de arriba es su resultado, no una promesa:
 
 ```bash
-./verificar-capsulas.sh             # las once reglas sobre todas las cápsulas, más la admisión, el censo, la tabla y lo publicado
-./verificar-capsulas.sh --self-test # la pareja, la frontera, su alcance, el entorno, el vocabulario, el reloj, el censo, la conducta, la admisión y lo publicado: de los diez se falsan a sí mismos
-./verificar-capsulas.sh --escribir-base # único escritor de brazos.esperado: reescribe la base de conducta
+./verificar-capsulas.sh             # las once reglas sobre todas las cápsulas, más la admisión, el censo, la tabla, lo publicado y el contrato
+./verificar-capsulas.sh --self-test # la pareja, la frontera, su alcance, el entorno, el vocabulario, el reloj, el censo, la conducta, la admisión, lo publicado y el contrato: de los once se falsan a sí mismos
+./verificar-capsulas.sh --escribir-base # único escritor de brazos.esperado: reescribe la base de conducta, y el contrato la coteja en el mismo acto
 ```
 
 Cada cápsula se corre cuatro veces: contra el servicio vulnerable (RC 0), contra el parche
@@ -208,6 +208,24 @@ brazo y a medir el ruido del procesador como si fuera del sujeto. Su falsador ti
 direcciones: el README real tiene que dar **RC 0 y cero líneas `FALLA`** —control positivo,
 primero—, y cada una de las tres aserciones mutilada por separado tiene que dar rojo
 nombrando su marcador propio.
+
+El contrato de la base —la undécima marca, y la primera que no mide lo que el gate comprueba
+ni lo que el repo anuncia, sino **el certificado que el repo se firma a sí mismo**— nace de
+otro defecto medido el 17-Nov-2026: `brazos.esperado` guarda la línea que cada brazo publica y
+su único escritor es `--escribir-base`, sin ninguna compuerta sobre el contenido. En una copia
+del árbol, un brazo degradado a `OK --self-test: hecho` fue **bendecido** por el escritor y la
+corrida salió **RC 0 con doce `OK` y cero `FALLA`**: la base certificaba que la conducta no
+había cambiado, no que midiera algo. Ahora `contrato.esperado` es el registro —una fila por
+brazo, con el token que su línea verde tiene que publicar y el marcador que su `FALLA` tiene
+que imprimir— y el undécimo brazo lo falsifica en tres direcciones independientes, más su
+control positivo: un registro al que se le borra una fila, una línea publicada que pierde su
+token, y un marcador rojo que el código no imprime. Pero el brazo sólo falsifica **la
+función**: el cierre aplica el cotejo a **la base en vigor**, fuera de todo brazo y después de
+que `--escribir-base` escriba, así que el escritor ya no puede bendecir una línea que pierda lo
+que mide —bendecirla devuelve **RC 1** nombrando el brazo y el token perdido—. Alcance
+declarado: ata el certificado al **texto**, no a la ejecución; un brazo vaciado por dentro que
+conserve la línea que publica su token pasa, y verlo exigiría un lector de conducta por brazo
+que este instrumento no tiene. Cuesta 0,1 s, sin red y sin jaula.
 
 Y una regla que el PoC cobra antes de que el gate la vea: **sin `--naive`, todas las vías
 tienen que coincidir.** Un veredicto que satisface a una sola esconde la regresión de la
